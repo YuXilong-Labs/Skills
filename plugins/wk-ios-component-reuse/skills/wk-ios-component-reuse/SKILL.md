@@ -1,5 +1,5 @@
 ---
-name: ios-component-reuse
+name: wk-ios-component-reuse
 description: |
   iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制执行"先检索组件再行动"，
   输出证据驱动的决策。依赖 MCP ios-components server。

@@ -1,17 +1,17 @@
 ---
 description: iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制执行"先检索组件再行动"
 mode: skill
-skill_file: skills/ios-component-reuse/SKILL.md
+skill_file: skills/wk-ios-component-reuse/SKILL.md
 ---
 
-# /ios-component-reuse
+# /wk-ios-component-reuse
 
 iOS 组件库复用工作流，依赖 MCP ios-components server。
 
 ## 用法
 
 ```
-/ios-component-reuse <参数>
+/wk-ios-component-reuse <参数>
 ```
 
 ## 参数格式
@@ -30,34 +30,34 @@ iOS 组件库复用工作流，依赖 MCP ios-components server。
 ### 组件选型
 
 ```
-/ios-component-reuse mode=selection requirement=做一个带分页列表、空态、下拉刷新的页面
+/wk-ios-component-reuse mode=selection requirement=做一个带分页列表、空态、下拉刷新的页面
 ```
 
 ### 复用优先实现
 
 ```
-/ios-component-reuse mode=implementation requirement=实现头像圆角缓存加载，优先复用现有组件
+/wk-ios-component-reuse mode=implementation requirement=实现头像圆角缓存加载，优先复用现有组件
 ```
 
 ### PR 复用审查
 
 ```
-/ios-component-reuse mode=review requirement=检查这个PR是否有自定义图片下载器
+/wk-ios-component-reuse mode=review requirement=检查这个PR是否有自定义图片下载器
 ```
 
 ### 迁移改造
 
 ```
-/ios-component-reuse mode=migration requirement=把业务里的URLSession+自定义缓存迁移到基础网络组件
+/wk-ios-component-reuse mode=migration requirement=把业务里的URLSession+自定义缓存迁移到基础网络组件
 ```
 
 ### 自然语言
 
 ```
-/ios-component-reuse 帮我做图片加载的组件选型
-/ios-component-reuse 实现上传功能，不要重复造轮子
-/ios-component-reuse review 这个 PR 有没有绕过基础组件
-/ios-component-reuse 把自定义弹窗替换成基础 UI 组件
+/wk-ios-component-reuse 帮我做图片加载的组件选型
+/wk-ios-component-reuse 实现上传功能，不要重复造轮子
+/wk-ios-component-reuse review 这个 PR 有没有绕过基础组件
+/wk-ios-component-reuse 把自定义弹窗替换成基础 UI 组件
 ```
 
 ## 输出

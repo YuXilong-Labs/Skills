@@ -1,17 +1,17 @@
 ---
 description: iOS 工程全局符号引用扫描 — 覆盖源码、Framework 二进制、Headers，输出结构化报告
 mode: skill
-skill_file: skills/symbol-reference-scan/SKILL.md
+skill_file: skills/wk-symbol-reference-scan/SKILL.md
 ---
 
-# /symbol-reference-scan
+# /wk-symbol-reference-scan
 
 在 iOS 工程中全面扫描指定符号的引用位置，覆盖源码、Framework Headers、二进制 strings 三条搜索路径，输出结构化 Markdown 表格报告。
 
 ## 用法
 
 ```
-/symbol-reference-scan <参数>
+/wk-symbol-reference-scan <参数>
 ```
 
 ## 参数格式
@@ -35,33 +35,33 @@ skill_file: skills/symbol-reference-scan/SKILL.md
 ### 单关键词扫描
 
 ```
-/symbol-reference-scan keywords=FeatureX project_root=.
+/wk-symbol-reference-scan keywords=FeatureX project_root=.
 ```
 
 ### 批量扫描
 
 ```
-/symbol-reference-scan keywords=FeatureX,FeatureY,FeatureZ mode=batch output_file=symbol_ref.md
+/wk-symbol-reference-scan keywords=FeatureX,FeatureY,FeatureZ mode=batch output_file=symbol_ref.md
 ```
 
 ### 关联扫描（自动扩展）
 
 ```
-/symbol-reference-scan keywords=FeatureX mode=related include_third_party=true
+/wk-symbol-reference-scan keywords=FeatureX mode=related include_third_party=true
 ```
 
 ### 仅源码搜索
 
 ```
-/symbol-reference-scan keywords=BTLiveManager scope=source_only
+/wk-symbol-reference-scan keywords=BTLiveManager scope=source_only
 ```
 
 ### 自然语言
 
 ```
-/symbol-reference-scan 帮我查一下 FeatureX 这个符号在工程里哪些地方用到了，包括二进制 framework
-/symbol-reference-scan 批量扫描 FeatureX 和 FeatureY 的引用，输出到文件
-/symbol-reference-scan 扫描 FeatureX 相关的所有符号变体
+/wk-symbol-reference-scan 帮我查一下 FeatureX 这个符号在工程里哪些地方用到了，包括二进制 framework
+/wk-symbol-reference-scan 批量扫描 FeatureX 和 FeatureY 的引用，输出到文件
+/wk-symbol-reference-scan 扫描 FeatureX 相关的所有符号变体
 ```
 
 ## 输出

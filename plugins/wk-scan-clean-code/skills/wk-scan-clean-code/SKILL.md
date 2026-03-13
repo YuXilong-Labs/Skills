@@ -1,5 +1,5 @@
 ---
-name: scan-clean-code
+name: wk-scan-clean-code
 description: |
   iOS/macOS 代码清理审计工具 — 识别 ObjC/Swift 工程中可安全删除的字段、方法、文件。
   支持 4 种扫描模式：Model 字段审计、死代码检测、无用文件检测、全量扫描。

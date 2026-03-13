@@ -7,30 +7,30 @@
   },
   "plugins": [
     {
-      "name": "scan-clean-code",
+      "name": "wk-scan-clean-code",
       "description": "代码清理审计工具 — 识别 ObjC/Swift 工程中可安全删除的字段、方法、文件",
       "version": "1.0.0",
-      "source": "./",
+      "source": "./plugins/wk-scan-clean-code",
       "author": {
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
     },
     {
-      "name": "ios-component-reuse",
+      "name": "wk-ios-component-reuse",
       "description": "iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制执行先检索组件再行动",
       "version": "1.0.0",
-      "source": "./",
+      "source": "./plugins/wk-ios-component-reuse",
       "author": {
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
     },
     {
-      "name": "symbol-reference-scan",
+      "name": "wk-symbol-reference-scan",
       "description": "iOS 工程全局符号引用扫描 — 覆盖源码、Framework Headers、二进制 strings，输出结构化报告",
       "version": "1.0.0",
-      "source": "./",
+      "source": "./plugins/wk-symbol-reference-scan",
       "author": {
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"

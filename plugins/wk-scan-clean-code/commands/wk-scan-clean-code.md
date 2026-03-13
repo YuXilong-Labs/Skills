@@ -1,17 +1,17 @@
 ---
 description: 对 ObjC/Swift 工程执行代码清理审计，识别可安全删除的字段、方法、文件
 mode: skill
-skill_file: skills/scan-clean-code/SKILL.md
+skill_file: skills/wk-scan-clean-code/SKILL.md
 ---
 
-# /scan-clean-code
+# /wk-scan-clean-code
 
 对 iOS/macOS Objective-C 和 Swift 工程执行代码清理审计。
 
 ## 用法
 
 ```
-/scan-clean-code <参数>
+/wk-scan-clean-code <参数>
 ```
 
 ## 参数格式
@@ -34,33 +34,33 @@ skill_file: skills/scan-clean-code/SKILL.md
 ### Model 字段审计
 
 ```
-/scan-clean-code target_file=Models/UserModel.h project_root=. mode=model-fields
+/wk-scan-clean-code target_file=Models/UserModel.h project_root=. mode=model-fields
 ```
 
 ### 死代码检测
 
 ```
-/scan-clean-code project_root=. business_scope=Sources mode=dead-code
+/wk-scan-clean-code project_root=. business_scope=Sources mode=dead-code
 ```
 
 ### 无用文件检测
 
 ```
-/scan-clean-code project_root=. mode=unused-files exclude_paths=Pods,Vendor,Tests
+/wk-scan-clean-code project_root=. mode=unused-files exclude_paths=Pods,Vendor,Tests
 ```
 
 ### 全量扫描
 
 ```
-/scan-clean-code project_root=. mode=full
+/wk-scan-clean-code project_root=. mode=full
 ```
 
 ### 自然语言
 
 ```
-/scan-clean-code 帮我检查 UserModel.h 里哪些字段没有被使用
-/scan-clean-code 扫描 Sources 目录下的死代码
-/scan-clean-code 找出工程里没用的文件
+/wk-scan-clean-code 帮我检查 UserModel.h 里哪些字段没有被使用
+/wk-scan-clean-code 扫描 Sources 目录下的死代码
+/wk-scan-clean-code 找出工程里没用的文件
 ```
 
 ## 输出

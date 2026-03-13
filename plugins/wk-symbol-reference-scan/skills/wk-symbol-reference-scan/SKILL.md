@@ -1,5 +1,5 @@
 ---
-name: symbol-reference-scan
+name: wk-symbol-reference-scan
 description: |
   iOS 工程全局符号引用扫描工具 — 覆盖源码、Framework Headers、二进制 strings 三条路径。
   支持 single/batch/related 三种模式，输出结构化 Markdown 表格报告。

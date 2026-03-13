@@ -1,0 +1,9 @@
+{
+  "name": "wk-symbol-reference-scan",
+  "version": "1.0.0",
+  "description": "iOS 工程全局符号引用扫描 — 覆盖源码、Framework Headers、二进制 strings，输出结构化报告",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

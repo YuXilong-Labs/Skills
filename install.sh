@@ -1,6 +1,7 @@
 #!/bin/bash
 # install.sh — Skills 仓库统一安装脚本
 # Created by yuxilong on 2026/03/13
+# 支持双目标安装（Claude Code + Codex）和 curl 远程安装
 
 set -euo pipefail
 
@@ -12,14 +13,31 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-CLAUDE_DIR="$HOME/.claude"
-SKILLS_DIR="$CLAUDE_DIR/skills"
-COMMANDS_DIR="$CLAUDE_DIR/commands"
+REPO_URL="https://github.com/YuXilong-Labs/Skills.git"
+TARGETS=("$HOME/.claude" "$HOME/.codex")
+CLEANUP=false
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# curl 远程安装：如果当前目录没有 plugins/ 目录，自动 clone
+if [ ! -d "$SCRIPT_DIR/plugins" ]; then
+    echo -e "${BLUE}未检测到本地仓库，从远程 clone...${NC}"
+    TMPDIR=$(mktemp -d)
+    git clone --depth 1 "$REPO_URL" "$TMPDIR/Skills" 2>/dev/null
+    SCRIPT_DIR="$TMPDIR/Skills"
+    CLEANUP=true
+fi
+
+cleanup() {
+    if [ "$CLEANUP" = true ] && [ -n "${TMPDIR:-}" ]; then
+        rm -rf "$TMPDIR"
+    fi
+}
+trap cleanup EXIT
 
 print_header() {
     echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║   Skills Installer for Claude Code   ║${NC}"
+    echo -e "${CYAN}║         & OpenAI Codex CLI           ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
     echo
 }
@@ -32,84 +50,92 @@ print_usage() {
     echo "  ./install.sh --list              列出所有可用 Skills"
     echo "  ./install.sh --help              显示帮助信息"
     echo
+    echo -e "${BLUE}远程安装:${NC}"
+    echo "  curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.sh | bash"
+    echo
 }
 
 list_skills() {
     echo -e "${BLUE}可用 Skills:${NC}"
     echo
-    if [ -d "$SCRIPT_DIR/skills" ]; then
-        for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-            if [ -d "$skill_dir" ]; then
-                skill_name=$(basename "$skill_dir")
-                if [ -f "$skill_dir/SKILL.md" ]; then
-                    # 从 SKILL.md 的 frontmatter 提取 description 第一行
-                    desc=$(sed -n '/^description:/,/^[^ ]/{ /^description:/{ s/^description:\s*//; /|/!p; }; /^  /{ s/^  //; p; q; }; }' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
-                    echo -e "  ${GREEN}●${NC} ${skill_name}"
+    if [ -d "$SCRIPT_DIR/plugins" ]; then
+        for plugin_dir in "$SCRIPT_DIR/plugins"/*/; do
+            if [ -d "$plugin_dir" ]; then
+                plugin_name=$(basename "$plugin_dir")
+                # 在 plugin 子目录中找 SKILL.md
+                skill_md=$(find "$plugin_dir/skills" -name "SKILL.md" -maxdepth 2 2>/dev/null | head -1)
+                if [ -n "$skill_md" ] && [ -f "$skill_md" ]; then
+                    desc=$(sed -n '/^description:/,/^[^ ]/{ /^description:/{ s/^description:\s*//; /|/!p; }; /^  /{ s/^  //; p; q; }; }' "$skill_md" 2>/dev/null | head -1)
+                    echo -e "  ${GREEN}●${NC} ${plugin_name}"
                     [ -n "$desc" ] && echo -e "    ${YELLOW}${desc}${NC}"
                 else
-                    echo -e "  ${RED}○${NC} ${skill_name} (缺少 SKILL.md)"
+                    echo -e "  ${RED}○${NC} ${plugin_name} (缺少 SKILL.md)"
                 fi
             fi
         done
     else
-        echo -e "  ${RED}未找到 skills/ 目录${NC}"
+        echo -e "  ${RED}未找到 plugins/ 目录${NC}"
     fi
     echo
 }
 
 install_skill() {
-    local skill_name="$1"
-    local skill_src="$SCRIPT_DIR/skills/$skill_name"
-    local skill_dst="$SKILLS_DIR/$skill_name"
-    local cmd_src="$SCRIPT_DIR/commands/${skill_name}.md"
-    local cmd_dst="$COMMANDS_DIR/${skill_name}.md"
+    local plugin_name="$1"
+    local plugin_dir="$SCRIPT_DIR/plugins/$plugin_name"
 
-    # 检查源目录
-    if [ ! -d "$skill_src" ]; then
-        echo -e "${RED}✗ Skill '$skill_name' 不存在${NC}"
+    if [ ! -d "$plugin_dir" ]; then
+        echo -e "${RED}✗ Skill '$plugin_name' 不存在${NC}"
         return 1
     fi
 
-    # 检查是否已安装
-    if [ -d "$skill_dst" ]; then
-        echo -e "${YELLOW}⚠ Skill '$skill_name' 已安装，将覆盖更新${NC}"
-    fi
+    for target in "${TARGETS[@]}"; do
+        local target_name
+        target_name=$(basename "$target")
+        local skills_dst="$target/skills"
+        local commands_dst="$target/commands"
 
-    # 创建目标目录
-    mkdir -p "$SKILLS_DIR"
-    mkdir -p "$COMMANDS_DIR"
+        mkdir -p "$skills_dst"
+        mkdir -p "$commands_dst"
 
-    # 复制 skill 目录
-    cp -r "$skill_src" "$skill_dst"
-    echo -e "${GREEN}✓${NC} 已安装 skill: ${CYAN}$skill_dst${NC}"
+        # 复制 skills/ 子目录
+        if [ -d "$plugin_dir/skills" ]; then
+            cp -r "$plugin_dir/skills/"* "$skills_dst/"
+            echo -e "${GREEN}✓${NC} [${target_name}] 已安装 skill: ${CYAN}$skills_dst/$plugin_name${NC}"
+        fi
 
-    # 复制 command 文件（如果存在）
-    if [ -f "$cmd_src" ]; then
-        cp "$cmd_src" "$cmd_dst"
-        echo -e "${GREEN}✓${NC} 已安装 command: ${CYAN}$cmd_dst${NC}"
-    fi
+        # 复制 commands/ 文件
+        if [ -d "$plugin_dir/commands" ]; then
+            cp "$plugin_dir/commands/"* "$commands_dst/"
+            echo -e "${GREEN}✓${NC} [${target_name}] 已安装 command: ${CYAN}$commands_dst/${plugin_name}.md${NC}"
+        fi
+    done
 }
 
 uninstall_skill() {
-    local skill_name="$1"
-    local skill_dst="$SKILLS_DIR/$skill_name"
-    local cmd_dst="$COMMANDS_DIR/${skill_name}.md"
+    local plugin_name="$1"
     local removed=false
 
-    if [ -d "$skill_dst" ]; then
-        rm -rf "$skill_dst"
-        echo -e "${GREEN}✓${NC} 已卸载 skill: ${CYAN}$skill_dst${NC}"
-        removed=true
-    fi
+    for target in "${TARGETS[@]}"; do
+        local target_name
+        target_name=$(basename "$target")
+        local skill_dst="$target/skills/$plugin_name"
+        local cmd_dst="$target/commands/${plugin_name}.md"
 
-    if [ -f "$cmd_dst" ]; then
-        rm "$cmd_dst"
-        echo -e "${GREEN}✓${NC} 已卸载 command: ${CYAN}$cmd_dst${NC}"
-        removed=true
-    fi
+        if [ -d "$skill_dst" ]; then
+            rm -rf "$skill_dst"
+            echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 skill: ${CYAN}$skill_dst${NC}"
+            removed=true
+        fi
+
+        if [ -f "$cmd_dst" ]; then
+            rm "$cmd_dst"
+            echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 command: ${CYAN}$cmd_dst${NC}"
+            removed=true
+        fi
+    done
 
     if [ "$removed" = false ]; then
-        echo -e "${YELLOW}⚠ Skill '$skill_name' 未安装${NC}"
+        echo -e "${YELLOW}⚠ Skill '$plugin_name' 未安装${NC}"
     fi
 }
 
@@ -118,11 +144,11 @@ install_all() {
     echo
 
     local count=0
-    if [ -d "$SCRIPT_DIR/skills" ]; then
-        for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-            if [ -d "$skill_dir" ]; then
-                skill_name=$(basename "$skill_dir")
-                install_skill "$skill_name"
+    if [ -d "$SCRIPT_DIR/plugins" ]; then
+        for plugin_dir in "$SCRIPT_DIR/plugins"/*/; do
+            if [ -d "$plugin_dir" ]; then
+                plugin_name=$(basename "$plugin_dir")
+                install_skill "$plugin_name"
                 count=$((count + 1))
                 echo
             fi
@@ -134,7 +160,7 @@ install_all() {
         return 1
     fi
 
-    echo -e "${GREEN}✓ 共安装 ${count} 个 Skill${NC}"
+    echo -e "${GREEN}✓ 共安装 ${count} 个 Skill（目标：${TARGETS[*]}）${NC}"
 }
 
 # --- 主逻辑 ---

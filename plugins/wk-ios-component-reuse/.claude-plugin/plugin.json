@@ -1,0 +1,9 @@
+{
+  "name": "wk-ios-component-reuse",
+  "version": "1.0.0",
+  "description": "iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制执行先检索组件再行动",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}
