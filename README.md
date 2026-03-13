@@ -23,6 +23,20 @@
 
 ## 安装
 
+### 方式 1：Plugin Marketplace（推荐）
+
+> 需要 Claude Code ≥ 1.0.33
+
+```
+# 添加 marketplace
+/plugin marketplace add YuXilong-Labs/Skills
+
+# 安装 plugin
+/plugin install scan-clean-code@yuxilong-skills
+```
+
+### 方式 2：手动安装
+
 ```bash
 # 克隆仓库
 git clone https://github.com/YuXilong-Labs/Skills.git
@@ -67,7 +81,10 @@ cd Skills
 
 ```
 Skills/
-├── install.sh              # 统一安装脚本
+├── .claude-plugin/         # Plugin Marketplace 清单
+│   ├── plugin.json
+│   └── marketplace.json
+├── install.sh              # 手动安装脚本
 ├── skills/                 # 镜像 ~/.claude/skills/
 │   └── scan-clean-code/
 │       ├── SKILL.md        # 主技能定义

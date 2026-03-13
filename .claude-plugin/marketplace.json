@@ -1,0 +1,20 @@
+{
+  "name": "yuxilong-skills",
+  "description": "iOS/macOS 开发 Claude Code 技能集合",
+  "owner": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  },
+  "plugins": [
+    {
+      "name": "scan-clean-code",
+      "description": "代码清理审计工具 — 识别 ObjC/Swift 工程中可安全删除的字段、方法、文件",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
+    }
+  ]
+}
