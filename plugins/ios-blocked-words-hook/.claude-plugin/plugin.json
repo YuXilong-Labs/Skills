@@ -1,0 +1,9 @@
+{
+  "name": "ios-blocked-words-hook",
+  "version": "1.0.0",
+  "description": "iOS 禁止关键词 PostToolUse Hook — Edit/Write iOS 文件后自动触发检查",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

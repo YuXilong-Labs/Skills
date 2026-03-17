@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.h|*.m|*.mm|*.swift|*.c|*.cpp) result=$(python3 \"$HOME/.claude/skills/ios-blocked-words-check/scripts/check_blocked_words.py\" \"$f\" 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PostToolUse\\\",\\\"additionalContext\\\":\\\"iOS 禁止关键词检查失败，禁止 git commit。违规详情：\\n$result\\\"}}\"; fi ;; esac; }",
+            "timeout": 30,
+            "statusMessage": "iOS 禁止关键词检查中..."
+          }
+        ]
+      }
+    ]
+  }
+}

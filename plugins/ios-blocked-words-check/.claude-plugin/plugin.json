@@ -1,0 +1,9 @@
+{
+  "name": "ios-blocked-words-check",
+  "version": "1.0.0",
+  "description": "iOS App Store 审核合规禁止关键词检查 — 智能匹配敏感词，防止代码提交后被拒审",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}
