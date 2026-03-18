@@ -1,0 +1,9 @@
+{
+  "name": "wk-review",
+  "version": "1.0.0",
+  "description": "本地代码修改 Review 工具 — 基于 git diff 审查逻辑 bug、crash 风险、内存泄漏、性能问题",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}
