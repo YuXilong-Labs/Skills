@@ -27,10 +27,11 @@ skill_file: skills/wk-review/SKILL.md
 - `focus` — 可选，聚焦审查领域（逗号分隔）：
   - `logic` — 逻辑 bug
   - `crash` — crash 风险
-  - `memory` — 内存泄漏
+  - `memory` — 内存问题
   - `performance` — 性能问题
   - `thread` — 线程安全
   - `resource` — 资源管理
+  - `bestpractice` — 语言最佳实践
 - `severity` — 最低输出级别（默认 `LOW`）：`CRITICAL` / `HIGH` / `MEDIUM` / `LOW`
 
 ## 使用示例

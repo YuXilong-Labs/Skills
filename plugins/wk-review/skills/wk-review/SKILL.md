@@ -8,7 +8,7 @@ description: |
   所有结论附带准确行号和代码证据，分级输出，只读不改。
 ---
 
-# WK-Review — 本地代码修改审查 Skill（Agent 并行架构）
+# WK-Review — 本地代码修改审查 Skill（Agent 并行架构，7 大维度）
 
 ## 架构概览
 
@@ -34,12 +34,12 @@ description: |
 | 参数 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
 | `scope` | 否 | `all` | diff 范围：`staged` / `unstaged` / `all` / `branch` / `commit:<hash>` |
-| `focus` | 否 | 全部 | 聚焦领域（逗号分隔）：`logic,crash,memory,performance,thread,resource` |
+| `focus` | 否 | 全部 | 聚焦领域（逗号分隔）：`logic,crash,memory,performance,thread,resource,bestpractice` |
 | `severity` | 否 | `LOW` | 最低输出级别：`CRITICAL` / `HIGH` / `MEDIUM` / `LOW` |
 
 ---
 
-## 审查维度（6 大类）
+## 审查维度（7 大类）
 
 ### 1. 逻辑 Bug（logic）
 - 条件判断错误（边界值、off-by-one、取反遗漏）
@@ -84,6 +84,32 @@ description: |
 - 定时器未 invalidate
 - 通知未移除
 - 音视频 session 未正确停止/释放
+
+### 7. 语言最佳实践（bestpractice）
+- **Swift**：
+  - 可选值处理（优先 `guard let` / `if let`，避免 `!` 强制解包和 `as!` 强转）
+  - 值类型 vs 引用类型选择（纯数据模型优先 `struct`，需要共享/继承时用 `class`）
+  - 枚举建模（用 `enum` + associated value 替代松散的常量/字符串标记）
+  - 协议导向设计（优先协议扩展提供默认实现，避免深层继承链）
+  - 访问控制（合理使用 `private` / `fileprivate` / `internal`，避免不必要的 `public`）
+  - 错误处理（优先 `throws` + `do-catch`，避免用可选值隐藏错误）
+  - 集合操作（优先 `map` / `filter` / `compactMap`，避免手动 for 循环拼装）
+  - 命名规范（方法名动词开头、布尔属性 `is`/`has` 前缀、工厂方法 `make` 前缀）
+  - 现代 API 使用（优先 `Result` / `async-await`，避免嵌套回调金字塔）
+- **Objective-C**：
+  - 属性声明规范（`nonatomic` / `copy` / `strong` / `weak` 语义准确）
+  - Nullability 标注完整（`NS_ASSUME_NONNULL_BEGIN/END` + 逐个 `nullable` 标注）
+  - 轻量泛型使用（`NSArray<NSString *> *` 替代裸 `NSArray *`）
+  - 枚举规范（`NS_ENUM` / `NS_OPTIONS` 替代裸 `enum`）
+  - 分类命名规范（方法加前缀避免冲突、分类文件命名 `ClassName+CategoryName`）
+  - Block typedef（复杂 Block 签名用 `typedef` 提高可读性）
+  - 初始化模式（指定初始化器 `NS_DESIGNATED_INITIALIZER`、`instancetype` 返回类型）
+  - 现代语法使用（字面量 `@[]` `@{}` `@()`、下标访问、`?:` 空合运算）
+- **通用**：
+  - 避免魔法数字/字符串（提取为命名常量或枚举）
+  - 函数职责单一（单个函数不超过 50 行，做一件事）
+  - 避免过深嵌套（超过 4 层缩进应考虑提前 return 或拆分）
+  - 命名可读性（变量/函数名清晰表达意图，避免缩写和单字母命名）
 
 ---
 
@@ -188,14 +214,15 @@ git show <hash> --no-color
 
 ## 审查规范
 
-### 审查维度（按以下 6 大类逐一检查）
+### 审查维度（按以下 7 大类逐一检查）
 
 1. **逻辑 Bug（logic）**：条件判断错误、流程控制错误（return vs continue vs break）、状态管理错误、类型转换错误、算法逻辑错误
 2. **修改对原有逻辑的影响（impact）**：行为变更、副作用、接口兼容性、默认值变化、删除被依赖的代码
 3. **Crash 风险（crash）**：空值/nil 访问、数组越界、类型强转失败、线程安全 crash、野指针/悬垂引用
 4. **内存问题（memory）**：循环引用、闭包强引用链、通知/KVO 未移除、定时器强引用、大对象缓存未释放、大内存分配（一次性加载大文件/大图）、持续内存增长（缓存无上限、集合不断增长）、内存峰值（循环内大量临时对象无 autoreleasepool）
-5. **性能问题（performance）**：主线程阻塞、不必要的重复计算、大数据拷贝、内存峰值、过度绘制/布局
+5. **性能问题（performance）**：主线程阻塞、不必要的重复计算、大数据拷贝、过度绘制/布局
 6. **资源管理（resource）**：文件句柄未关闭、数据库连接未释放、定时器未 invalidate、通知未移除、音视频 session 未正确停止
+7. **语言最佳实践（bestpractice）**：Swift — 可选值处理、值/引用类型选择、协议导向、访问控制、现代 API；ObjC — 属性语义、Nullability、轻量泛型、NS_ENUM、分类规范；通用 — 魔法数字、函数职责单一、避免深嵌套、命名可读性
 
 ### 严重程度分级
 
@@ -236,7 +263,7 @@ git show <hash> --no-color
   "issues": [
     {
       "severity": "CRITICAL|HIGH|MEDIUM|LOW",
-      "category": "logic|impact|crash|memory|performance|resource",
+      "category": "logic|impact|crash|memory|performance|resource|bestpractice",
       "title": "问题简述",
       "file": "完整文件路径",
       "line": 行号数字,
@@ -363,6 +390,7 @@ git show <hash> --no-color
 - [ ] 是否有条件判断遗漏分支
 - [ ] 是否有类型强转可能失败
 - [ ] 本次修改是否改变了既有函数的行为语义
+- [ ] 是否符合语言最佳实践（Swift/ObjC 惯用写法、命名规范）
 
 ---
 

@@ -140,3 +140,35 @@
 - [ ] 定时器是否在不需要时 invalidate
 - [ ] 网络连接是否在不需要时取消
 - [ ] 临时文件是否在使用后清理
+
+---
+
+## 7. 语言最佳实践清单
+
+### Swift
+- [ ] 可选值是否优先使用 `guard let` / `if let`（而非 `!` 强制解包）
+- [ ] 类型强转是否使用 `as?`（而非 `as!`）
+- [ ] 纯数据模型是否优先使用 `struct`（而非 `class`）
+- [ ] 是否用 `enum` + associated value 替代松散的常量/字符串标记
+- [ ] 是否优先通过协议扩展提供默认实现（避免深层继承链）
+- [ ] 访问控制是否合理（`private` / `fileprivate` / `internal`，避免不必要的 `public`）
+- [ ] 错误处理是否优先 `throws` + `do-catch`（避免用可选值隐藏错误）
+- [ ] 集合操作是否优先 `map` / `filter` / `compactMap`（避免手动 for 循环拼装）
+- [ ] 方法名是否动词开头、布尔属性是否 `is`/`has` 前缀
+- [ ] 是否使用现代 API（`Result` / `async-await`，避免嵌套回调金字塔）
+
+### Objective-C
+- [ ] 属性声明语义是否准确（`nonatomic` / `copy` / `strong` / `weak`）
+- [ ] Nullability 标注是否完整（`NS_ASSUME_NONNULL_BEGIN/END` + `nullable`）
+- [ ] 集合是否使用轻量泛型（`NSArray<NSString *> *` 替代裸 `NSArray *`）
+- [ ] 枚举是否使用 `NS_ENUM` / `NS_OPTIONS`（替代裸 `enum`）
+- [ ] 分类方法是否加前缀避免冲突、文件命名是否 `ClassName+CategoryName`
+- [ ] 复杂 Block 签名是否用 `typedef` 提高可读性
+- [ ] 初始化器是否标记 `NS_DESIGNATED_INITIALIZER`、返回类型是否 `instancetype`
+- [ ] 是否使用现代语法（字面量 `@[]` `@{}` `@()`、下标访问）
+
+### 通用
+- [ ] 是否有魔法数字/字符串（应提取为命名常量或枚举）
+- [ ] 函数是否职责单一（单个函数不超过 50 行）
+- [ ] 是否有超过 4 层的嵌套（应考虑提前 return 或拆分）
+- [ ] 变量/函数命名是否清晰表达意图（避免缩写和单字母命名）
