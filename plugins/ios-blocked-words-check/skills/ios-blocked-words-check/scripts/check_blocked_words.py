@@ -6,7 +6,9 @@
 # 用法:
 #   python3 check_blocked_words.py [file1 file2 ...]  # 检查指定文件
 #   python3 check_blocked_words.py --staged            # 检查 git staged 文件
-#   python3 check_blocked_words.py --all               # 检查所有 iOS 源码文件
+#   python3 check_blocked_words.py --all <dir>         # 检查目录下所有 iOS 源码
+#   python3 check_blocked_words.py --all <dir> --skip-comments --summary  # 批量汇总（跳过注释）
+#   python3 check_blocked_words.py --all <dir> --skip-comments --summary --trace-proto <proto_root>
 
 import re
 import sys
@@ -169,7 +171,6 @@ def build_pattern(word: str, mode: str) -> re.Pattern:
 
     if mode == "exact":
         # 精确匹配完整 token：前后必须是非标识符字符
-        # 标识符字符 = [a-zA-Z0-9_]
         return re.compile(r'(?<![a-zA-Z0-9_])' + escaped + r'(?![a-zA-Z0-9_])', re.IGNORECASE)
 
     elif mode == "word_boundary":
@@ -178,17 +179,6 @@ def build_pattern(word: str, mode: str) -> re.Pattern:
 
     elif mode == "compound":
         # 复合词匹配：关键词可作为标识符的组件出现
-        # 匹配场景：
-        #   1. 独立出现: money (前后非标识符字符)
-        #   2. 驼峰前缀: payCoins, moneyAmount (后跟大写字母)
-        #   3. 驼峰后缀: chatMoney, bigWin (前面是小写字母 + 关键词首字母大写)
-        #   4. 下划线连接: pay_type, chat_money (前后有下划线)
-        #   5. 全大写: PAY_TYPE, GAME_ID
-        #
-        # 用负向前瞻/后顾排除纯粹的子串（如 payload 中的 pay）
-        # 策略：匹配包含关键词的完整标识符，然后检查白名单
-
-        # 匹配包含该词的完整标识符
         return re.compile(
             r'[a-zA-Z_]*' + escaped + r'[a-zA-Z_]*',
             re.IGNORECASE
@@ -233,19 +223,14 @@ def is_compound_match(full_token: str, keyword: str) -> bool:
     # 检查关键词前面的边界
     left_ok = False
     if idx == 0:
-        # 关键词在开头
         left_ok = True
     else:
         prev_char = full_token[idx - 1]
         if prev_char == '_':
-            # 下划线分隔: chat_money
             left_ok = True
         elif prev_char.islower() and full_token[idx].isupper():
-            # 驼峰边界: chatMoney (t→M)
             left_ok = True
         elif prev_char.isupper() and full_token[idx].isupper():
-            # 全大写: CHAT_MONEY 或 CHATMoney 的情况
-            # 需要检查关键词后面是否有边界
             left_ok = True
 
     if not left_ok:
@@ -254,36 +239,38 @@ def is_compound_match(full_token: str, keyword: str) -> bool:
     # 检查关键词后面的边界
     right_ok = False
     if kw_end == len(full_token):
-        # 关键词在结尾
         right_ok = True
     else:
         next_char = full_token[kw_end]
         if next_char == '_':
-            # 下划线分隔: pay_type
             right_ok = True
         elif next_char.isupper():
-            # 驼峰边界: payCoins (y→C)
             right_ok = True
         elif full_token[kw_end - 1].isupper() and next_char.islower():
-            # 全大写关键词后跟小写: PAYment → 不算，这是单词延续
-            # 但 PAY_type → 前面已处理下划线
             right_ok = False
 
     return right_ok
 
 
-def check_line(line: str, line_num: int, filepath: str) -> list:
+def is_comment_line(line: str) -> bool:
+    """判断是否为注释行（// 、/* 、* 开头）"""
+    stripped = line.strip()
+    return (stripped.startswith('//')
+            or stripped.startswith('*')
+            or stripped.startswith('/*'))
+
+
+def check_line(line: str, line_num: int, filepath: str,
+               skip_comments: bool = False) -> list:
     """检查单行代码是否包含禁止关键词"""
     violations = []
 
-    # 跳过注释行中的非代码内容（仅跳过纯注释行，不跳过含代码的行）
     stripped = line.strip()
-    # 单行注释
-    if stripped.startswith('//') or stripped.startswith('*') or stripped.startswith('/*'):
-        # 注释中也要检查，但给出提示
-        is_comment = True
-    else:
-        is_comment = False
+    is_comment = is_comment_line(line)
+
+    # --skip-comments：跳过注释行
+    if skip_comments and is_comment:
+        return violations
 
     for rule in BLOCKED_WORDS:
         word = rule["word"]
@@ -294,11 +281,9 @@ def check_line(line: str, line_num: int, filepath: str) -> list:
             matched_text = m.group()
 
             if mode == "compound":
-                # compound 模式需要额外判断
                 if not is_compound_match(matched_text, word):
                     continue
 
-            # 再次检查完整 token 白名单（所有模式都检查）
             if is_whitelisted(matched_text):
                 continue
 
@@ -315,13 +300,15 @@ def check_line(line: str, line_num: int, filepath: str) -> list:
     return violations
 
 
-def check_file(filepath: str) -> list:
+def check_file(filepath: str, skip_comments: bool = False) -> list:
     """检查单个文件"""
     violations = []
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             for line_num, line in enumerate(f, 1):
-                violations.extend(check_line(line, line_num, filepath))
+                violations.extend(
+                    check_line(line, line_num, filepath,
+                               skip_comments=skip_comments))
     except (IOError, OSError) as e:
         print(f"警告: 无法读取 {filepath}: {e}", file=sys.stderr)
     return violations
@@ -347,7 +334,6 @@ def get_all_ios_files(root: str = '.') -> list:
     """递归获取所有 iOS 源码文件"""
     files = []
     for dirpath, _, filenames in os.walk(root):
-        # 跳过 Pods、build、.git 目录
         if any(skip in dirpath for skip in ['/Pods/', '/build/', '/.git/', '/DerivedData/']):
             continue
         for fname in filenames:
@@ -356,12 +342,61 @@ def get_all_ios_files(root: str = '.') -> list:
     return files
 
 
+def extract_proto_source(filepath: str) -> str:
+    """从 protobuf 生成文件中提取源 .proto 文件路径
+
+    protobuf 生成的 ObjC 文件头部通常含有:
+      // source: path/to/file.proto
+    """
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            for i, line in enumerate(f):
+                if i >= 30:
+                    break
+                line = line.strip()
+                # protoc 生成的 ObjC 文件头部标记
+                if line.startswith('// source:'):
+                    return line[len('// source:'):].strip()
+    except (IOError, OSError):
+        pass
+    return ""
+
+
+def trace_proto_field(proto_root: str, proto_rel_path: str,
+                      keyword: str) -> list:
+    """在 proto 文件中 grep 命中关键词的字段定义
+
+    返回 [(行号, 行内容), ...]
+    """
+    results = []
+    # 在 proto_root 下查找匹配的 proto 文件
+    proto_path = os.path.join(proto_root, proto_rel_path)
+    if not os.path.isfile(proto_path):
+        # 尝试模糊匹配：只用文件名
+        proto_name = os.path.basename(proto_rel_path)
+        for dirpath, _, filenames in os.walk(proto_root):
+            if proto_name in filenames:
+                proto_path = os.path.join(dirpath, proto_name)
+                break
+        else:
+            return results
+
+    try:
+        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+        with open(proto_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for line_num, line in enumerate(f, 1):
+                if pattern.search(line):
+                    results.append((line_num, line.rstrip()))
+    except (IOError, OSError):
+        pass
+    return results
+
+
 def format_violations(violations: list) -> str:
     """格式化输出违规信息"""
     if not violations:
         return "✅ 未发现禁止关键词\n"
 
-    # 按文件分组
     by_file = {}
     for v in violations:
         by_file.setdefault(v['file'], []).append(v)
@@ -383,43 +418,196 @@ def format_violations(violations: list) -> str:
     return '\n'.join(lines)
 
 
+def format_summary(violations: list, proto_root: str = "") -> str:
+    """汇总表格格式输出
+
+    按敏感词聚合，统计命中数和涉及文件数。
+    如果提供了 proto_root，会自动追溯源 proto 文件并 grep 字段定义。
+    """
+    if not violations:
+        return "✅ 未发现禁止关键词\n"
+
+    # 按 keyword 聚合
+    keyword_stats = {}
+    for v in violations:
+        kw = v['keyword']
+        if kw not in keyword_stats:
+            keyword_stats[kw] = {
+                'count': 0,
+                'files': set(),
+                'proto_sources': set(),  # 涉及的 proto 源文件
+            }
+        keyword_stats[kw]['count'] += 1
+        keyword_stats[kw]['files'].add(v['file'])
+
+    # 收集 proto 溯源信息
+    proto_traces = {}  # keyword -> [(proto_rel, line_num, line_content), ...]
+    if proto_root:
+        # 从所有涉及的文件中提取 proto 源路径
+        file_proto_map = {}
+        all_files = set(v['file'] for v in violations)
+        for fpath in all_files:
+            proto_src = extract_proto_source(fpath)
+            if proto_src:
+                file_proto_map[fpath] = proto_src
+
+        # 为每个 keyword 追溯 proto 字段
+        for kw, stats in keyword_stats.items():
+            traces = []
+            seen_protos = set()
+            for fpath in stats['files']:
+                proto_rel = file_proto_map.get(fpath, "")
+                if proto_rel and proto_rel not in seen_protos:
+                    seen_protos.add(proto_rel)
+                    stats['proto_sources'].add(proto_rel)
+                    hits = trace_proto_field(proto_root, proto_rel, kw)
+                    for line_num, line_content in hits:
+                        traces.append((proto_rel, line_num, line_content))
+            proto_traces[kw] = traces
+
+    total_keywords = len(keyword_stats)
+    total_hits = sum(s['count'] for s in keyword_stats.values())
+    skip_note = "（已忽略注释）"
+
+    lines = []
+    lines.append(
+        f"敏感词检查汇总：{total_keywords} 个敏感词，"
+        f"共 {total_hits} 处命中{skip_note}\n"
+    )
+
+    if proto_root:
+        # 带 proto 溯源的表格
+        lines.append(
+            "| 敏感词 | 命中数 | 涉及文件数 | 源 proto 文件 "
+            "| proto 行号 | 字段定义 |"
+        )
+        lines.append(
+            "|--------|--------|-----------|"
+            "--------------|-----------|---------|"
+        )
+        for kw, stats in sorted(keyword_stats.items(),
+                                key=lambda x: -x[1]['count']):
+            traces = proto_traces.get(kw, [])
+            if traces:
+                # 第一行
+                proto_rel, lnum, lcontent = traces[0]
+                lines.append(
+                    f"| {kw} | {stats['count']} | "
+                    f"{len(stats['files'])} | {proto_rel} | "
+                    f"L{lnum} | `{lcontent.strip()}` |"
+                )
+                # 后续行
+                for proto_rel, lnum, lcontent in traces[1:]:
+                    lines.append(
+                        f"| | | | {proto_rel} | "
+                        f"L{lnum} | `{lcontent.strip()}` |"
+                    )
+            else:
+                lines.append(
+                    f"| {kw} | {stats['count']} | "
+                    f"{len(stats['files'])} | - | - | - |"
+                )
+    else:
+        # 简洁表格（无 proto 溯源）
+        lines.append("| 敏感词 | 命中数 | 涉及文件数 |")
+        lines.append("|--------|--------|-----------|")
+        for kw, stats in sorted(keyword_stats.items(),
+                                key=lambda x: -x[1]['count']):
+            lines.append(
+                f"| {kw} | {stats['count']} | {len(stats['files'])} |"
+            )
+
+    lines.append("")
+    return '\n'.join(lines)
+
+
 def format_json(violations: list) -> str:
     """JSON 格式输出（供其他工具消费）"""
     return json.dumps(violations, ensure_ascii=False, indent=2)
 
 
-def main():
-    args = sys.argv[1:]
-    output_json = '--json' in args
-    args = [a for a in args if a != '--json']
+def parse_args(argv: list) -> dict:
+    """解析命令行参数"""
+    opts = {
+        'json': False,
+        'staged': False,
+        'all': False,
+        'all_root': '.',
+        'skip_comments': False,
+        'summary': False,
+        'trace_proto': '',
+        'files': [],
+    }
 
-    if '--staged' in args:
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--json':
+            opts['json'] = True
+        elif arg == '--staged':
+            opts['staged'] = True
+        elif arg == '--all':
+            opts['all'] = True
+            # 下一个参数如果不是 flag，就是目录
+            if i + 1 < len(argv) and not argv[i + 1].startswith('--'):
+                opts['all_root'] = argv[i + 1]
+                i += 1
+        elif arg == '--skip-comments':
+            opts['skip_comments'] = True
+        elif arg == '--summary':
+            opts['summary'] = True
+        elif arg == '--trace-proto':
+            if i + 1 < len(argv):
+                opts['trace_proto'] = argv[i + 1]
+                i += 1
+            else:
+                print("错误: --trace-proto 需要指定 proto 根目录",
+                      file=sys.stderr)
+                sys.exit(2)
+        elif os.path.isfile(arg):
+            opts['files'].append(arg)
+        i += 1
+
+    return opts
+
+
+def main():
+    opts = parse_args(sys.argv[1:])
+
+    if opts['staged']:
         files = get_staged_files()
         if not files:
             print("没有 staged 的 iOS 源码文件")
             sys.exit(0)
-    elif '--all' in args:
-        root = args[args.index('--all') + 1] if len(args) > args.index('--all') + 1 else '.'
-        files = get_all_ios_files(root)
+    elif opts['all']:
+        files = get_all_ios_files(opts['all_root'])
         if not files:
             print("未找到 iOS 源码文件")
             sys.exit(0)
-    elif args:
-        files = [f for f in args if os.path.isfile(f)]
+    elif opts['files']:
+        files = opts['files']
     else:
         print("用法:")
         print("  python3 check_blocked_words.py file1.m file2.h ...")
         print("  python3 check_blocked_words.py --staged")
         print("  python3 check_blocked_words.py --all [root_dir]")
+        print("  python3 check_blocked_words.py --all <dir> "
+              "--skip-comments --summary")
+        print("  python3 check_blocked_words.py --all <dir> "
+              "--skip-comments --summary --trace-proto <proto_root>")
         print("  添加 --json 输出 JSON 格式")
         sys.exit(0)
 
     all_violations = []
     for f in files:
-        all_violations.extend(check_file(f))
+        all_violations.extend(
+            check_file(f, skip_comments=opts['skip_comments']))
 
-    if output_json:
+    if opts['json']:
         print(format_json(all_violations))
+    elif opts['summary']:
+        print(format_summary(all_violations,
+                             proto_root=opts['trace_proto']))
     else:
         print(format_violations(all_violations))
 
