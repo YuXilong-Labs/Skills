@@ -67,6 +67,10 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-ios-component-reuse` | 组件库复用工作流（选型/实现/审查/迁移） | `ios-components` server |
 | `wk-symbol-reference-scan` | 全局符号引用扫描（源码/Headers/二进制） | 无 |
 
+## Git 约定
+
+- 本仓库提交和推送时**可跳过本地 git pre-commit hook**（使用 `--no-verify`）
+
 ## 设计原则
 
 - 证据驱动 — 所有结论必须附带搜索证据链
