@@ -56,16 +56,22 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
    - `skills/wk-<name>/SKILL.md`（含 frontmatter）
    - `skills/wk-<name>/references/`（按需）
    - `commands/wk-<name>.md`（frontmatter 中 `skill_file: skills/wk-<name>/SKILL.md`）
-2. 在 `.claude-plugin/marketplace.json` 的 `plugins` 数组中添加条目
-3. 更新 `README.md`
+2. **必须**在 `.claude-plugin/marketplace.json` 的 `plugins` 数组中添加条目（否则 Plugin Marketplace 无法发现该 Skill）
+3. 更新 `README.md`（Skills 表格、Commands 表格、安装命令列表、使用示例）
 
-## 现有 Skills
+## 现有 Skills / Hooks
 
-| Skill | 用途 | MCP 依赖 |
-|-------|------|----------|
-| `wk-scan-clean-code` | ObjC/Swift 代码清理审计（字段/死代码/无用文件） | 无 |
-| `wk-ios-component-reuse` | 组件库复用工作流（选型/实现/审查/迁移） | `ios-components` server |
-| `wk-symbol-reference-scan` | 全局符号引用扫描（源码/Headers/二进制） | 无 |
+| Plugin | 类型 | 用途 | MCP 依赖 |
+|--------|------|------|----------|
+| `wk-scan-clean-code` | Skill | ObjC/Swift 代码清理审计（字段/死代码/无用文件） | 无 |
+| `wk-ios-component-reuse` | Skill | 组件库复用工作流（选型/实现/审查/迁移） | `ios-components` server |
+| `wk-symbol-reference-scan` | Skill | 全局符号引用扫描（源码/Headers/二进制） | 无 |
+| `wk-review` | Skill | 本地代码修改 Review（bug/crash/内存泄漏/性能） | 无 |
+| `wk-sync-pb` | Skill | 同步上游 proto 并重新生成 ObjC Protobuf 代码 | 无 |
+| `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
+| `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
+
+> **注意**：所有 plugin 必须在 `.claude-plugin/marketplace.json` 中注册，否则 Plugin Marketplace 无法发现。
 
 ## Git 约定
 

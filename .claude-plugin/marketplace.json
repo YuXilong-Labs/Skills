@@ -55,6 +55,26 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "wk-review",
+      "description": "本地代码修改 Review 工具 — 基于 git diff 审查逻辑 bug、crash 风险、内存泄漏、性能问题",
+      "version": "1.0.0",
+      "source": "./plugins/wk-review",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
+    },
+    {
+      "name": "wk-sync-pb",
+      "description": "同步上游 proto 并重新生成 Objective-C Protobuf 代码，含敏感词检查与自动提交",
+      "version": "1.0.0",
+      "source": "./plugins/wk-sync-pb",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }

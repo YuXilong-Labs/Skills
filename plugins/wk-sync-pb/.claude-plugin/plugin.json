@@ -1,0 +1,9 @@
+{
+  "name": "wk-sync-pb",
+  "version": "1.0.0",
+  "description": "同步上游 proto 并重新生成 Objective-C Protobuf 代码，含敏感词检查与自动提交",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

@@ -4,83 +4,31 @@
 
 ## 可用 Skills
 
-### wk-scan-clean-code
+| Skill | 描述 | 模式 | MCP 依赖 |
+|-------|------|------|----------|
+| `wk-scan-clean-code` | 代码清理审计 — 识别 ObjC/Swift 工程中可安全删除的字段、方法、文件 | `model-fields` `dead-code` `unused-files` `full` | 无 |
+| `wk-ios-component-reuse` | 组件库复用工作流 — 选型、实现、审查、迁移阶段强制"先检索组件再行动" | `selection` `implementation` `review` `migration` | `ios-components` |
+| `wk-symbol-reference-scan` | 全局符号引用扫描 — 覆盖源码、Framework Headers、二进制 strings | `single` `batch` `related` | 无 |
+| `wk-review` | 本地代码修改 Review — 基于 git diff 审查 bug、crash、内存泄漏、性能问题 | 默认审查全部 diff | 无 |
+| `wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码 | 自动化流程（拉取→生成→检查→提交） | 无 |
+| `ios-blocked-words-check` | App Store 审核合规禁止关键词检查 — 智能匹配 60+ 高危敏感词 | 指定文件 / `--staged` / `--all` | 无 |
 
-代码清理审计工具 — 识别 ObjC/Swift 工程中可安全删除的字段、方法、文件。
+## Hooks
 
-**功能：**
-- **Model 字段审计** — 逐字段检查是否仍被业务代码使用
-- **死代码检测** — 识别无入口方法、废弃页面、断裂调用链
-- **无用文件检测** — 找出未被引用的源文件和资源文件
-- **全量扫描** — 综合执行以上三种检测
+| Hook | 类型 | 触发时机 | 描述 |
+|------|------|----------|------|
+| `ios-blocked-words-hook` | `PostToolUse` | `Edit` / `Write` iOS 源码文件后 | 自动触发禁止关键词检查，非阻塞，发现违规时注入警告并禁止 git commit |
 
-**特点：**
-- 支持 Objective-C 和 Swift
-- 所有结论附带完整证据链（搜索 pattern + 匹配结果）
-- 三级分类：可清理（高/中置信度）、需谨慎确认、活跃使用
-- ObjC 动态特性感知（KVC、@selector、JSON 映射框架等）
-- 只输出报告，不自动修改代码
+## Commands（斜杠命令）
 
-### wk-ios-component-reuse
-
-iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制执行"先检索组件再行动"。
-
-**前置要求：** MCP `ios-components` server 已连接。
-
-**4 种模式：**
-- **selection** — 组件选型评估，输出候选矩阵与主/备方案
-- **implementation** — 复用优先实现，先检索再编码（默认模式）
-- **review** — PR 组件复用审查，输出证据链与严重级别
-- **migration** — 重复实现迁移，输出映射表与分批改造计划
-
-**特点：**
-- JSON-first 多轮检索策略，小步收敛
-- 所有结论必须附带证据最小集（检索 + API + 佐证）
-- 完整的失败恢复与回退路径
-- 结构化输出契约，可审计、可追溯
-
-### wk-symbol-reference-scan
-
-iOS 工程全局符号引用扫描工具 — 覆盖源码、Framework Headers、二进制 strings，输出结构化报告。
-
-**功能：**
-- **单关键词扫描** — 快速确认某个符号在工程中的使用情况
-- **批量扫描** — 多关键词逐一扫描，附加综合关联关系分析
-- **关联扫描** — 自动扩展相关符号变体后批量扫描
-
-**特点：**
-- 三条并行搜索路径：源码 Grep、Framework Headers、二进制 strings
-- ObjC 运行时符号分类（class/property/method/ivar 等）
-- 业务模块 vs 三方 SDK 自动分类
-- 四元组去重（模块, 类, 符号名, 符号类型）
-- 只读操作，不修改任何文件
-- strings 超时保护（30s/次）
-
-### ios-blocked-words-check
-
-iOS App Store 审核合规禁止关键词检查 — 智能匹配敏感词（赌博、支付、金融等），防止代码提交后被拒审。
-
-**功能：**
-- **三种匹配模式** — `compound`（复合标识符组件）、`exact`（完整 token）、`word_boundary`（单词边界）
-- **智能防误判** — `payload` 不误报 `pay`、`window` 不误报 `win`、`cache` 不误报 `cash`
-- **多种检查方式** — 指定文件、git staged 文件、全目录扫描
-- **内置白名单** — 覆盖常见 iOS/protobuf 框架词汇
-
-**特点：**
-- 覆盖 60+ App Store 高危词
-- 驼峰/下划线语义边界智能识别
-- JSON 输出格式，可集成到 CI/CD
-- 纯 Python 实现，零依赖
-
-### ios-blocked-words-hook
-
-iOS 禁止关键词 PostToolUse Hook — Edit/Write iOS 文件后自动触发关键词检查。
-
-**功能：**
-- **自动触发** — Edit/Write iOS 源码文件后自动运行检查
-- **非阻塞** — 不阻止编辑操作，仅注入警告到 Claude 上下文
-- **智能过滤** — 非 iOS 文件自动跳过
-- **禁止提交** — 发现违规时提示禁止 git commit
+| 命令 | 描述 | 对应 Skill |
+|------|------|-----------|
+| `/wk-scan-clean-code` | 对 ObjC/Swift 工程执行代码清理审计，识别可安全删除的字段、方法、文件 | `wk-scan-clean-code` |
+| `/wk-ios-component-reuse` | iOS 组件库复用工作流 — 选型、实现、审查、迁移阶段强制先检索组件再行动 | `wk-ios-component-reuse` |
+| `/wk-symbol-reference-scan` | iOS 工程全局符号引用扫描 — 覆盖源码、Framework 二进制、Headers | `wk-symbol-reference-scan` |
+| `/wk-review` | 对本地 git 修改进行代码审查，关注逻辑 bug、crash 风险、内存泄漏、性能问题 | `wk-review` |
+| `/wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码（含敏感词检查与自动提交） | `wk-sync-pb` |
+| `/ios-blocked-words-check` | 检查 iOS 源码中的 App Store 审核禁止关键词（赌博、支付、金融等敏感词） | `ios-blocked-words-check` |
 
 ## 安装
 
@@ -104,6 +52,8 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install wk-scan-clean-code@yuxilong-skills
 /plugin install wk-ios-component-reuse@yuxilong-skills
 /plugin install wk-symbol-reference-scan@yuxilong-skills
+/plugin install wk-review@yuxilong-skills
+/plugin install wk-sync-pb@yuxilong-skills
 /plugin install ios-blocked-words-check@yuxilong-skills
 /plugin install ios-blocked-words-hook@yuxilong-skills
 ```
@@ -122,6 +72,8 @@ cd Skills
 ./install.sh wk-scan-clean-code
 ./install.sh wk-ios-component-reuse
 ./install.sh wk-symbol-reference-scan
+./install.sh wk-review
+./install.sh wk-sync-pb
 ./install.sh ios-blocked-words-check
 ./install.sh ios-blocked-words-hook
 ```
@@ -148,6 +100,14 @@ cd Skills
 /wk-symbol-reference-scan keywords=FeatureX,FeatureY mode=batch output_file=ref.md
 /wk-symbol-reference-scan keywords=FeatureX mode=related include_third_party=true
 
+# wk-review
+/wk-review
+/wk-review scope=staged
+/wk-review commit=HEAD~3..HEAD
+
+# wk-sync-pb
+/wk-sync-pb
+
 # ios-blocked-words-check
 /ios-blocked-words-check file=Classes/PB/SendGift.pbobjc.m
 /ios-blocked-words-check --staged
@@ -160,6 +120,8 @@ cd Skills
 /wk-scan-clean-code 帮我检查 UserModel.h 里哪些字段没用了
 /wk-ios-component-reuse 实现上传功能，不要重复造轮子
 /wk-symbol-reference-scan 帮我查一下 FeatureX 在工程里哪些地方用到了，包括二进制 framework
+/wk-review 帮我审查一下这次改动有没有内存泄漏
+/wk-sync-pb 同步一下上游 proto 并重新生成代码
 /ios-blocked-words-check 帮我检查 SendGift.pbobjc.m 里有没有敏感词
 ```
 
@@ -179,54 +141,33 @@ cd Skills
 Skills/
 ├── .claude-plugin/
 │   └── marketplace.json          # Plugin Marketplace 清单
-├── plugins/                      # 每个 Skill 独立为一个 plugin
-│   ├── wk-scan-clean-code/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   ├── skills/
-│   │   │   └── wk-scan-clean-code/
-│   │   │       ├── SKILL.md
-│   │   │       └── references/
-│   │   └── commands/
-│   │       └── wk-scan-clean-code.md
-│   ├── wk-ios-component-reuse/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   ├── skills/
-│   │   │   └── wk-ios-component-reuse/
-│   │   │       ├── SKILL.md
-│   │   │       └── references/
-│   │   └── commands/
-│   │       └── wk-ios-component-reuse.md
-│   └── wk-symbol-reference-scan/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── skills/
-│       │   └── wk-symbol-reference-scan/
-│       │       ├── SKILL.md
-│       │       └── references/
-│       ├── commands/
-│       │   └── wk-symbol-reference-scan.md
-│       └── README.md
-│   ├── ios-blocked-words-check/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   ├── skills/
-│   │   │   └── ios-blocked-words-check/
-│   │   │       ├── SKILL.md
-│   │   │       └── scripts/
-│   │   │           └── check_blocked_words.py
-│   │   ├── commands/
-│   │   │   └── ios-blocked-words-check.md
-│   │   └── README.md
-│   └── ios-blocked-words-hook/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── hooks/
-│       │   └── settings-snippet.json
-│       └── README.md
+├── plugins/                      # 每个 Skill/Hook 独立为一个 plugin
+│   ├── wk-scan-clean-code/       # 代码清理审计
+│   ├── wk-ios-component-reuse/   # 组件库复用工作流
+│   ├── wk-symbol-reference-scan/ # 全局符号引用扫描
+│   ├── wk-review/                # 本地代码修改 Review
+│   ├── wk-sync-pb/               # Proto 同步与 ObjC 代码生成
+│   ├── ios-blocked-words-check/  # 禁止关键词检查 Skill
+│   └── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
 ├── install.sh                    # 双目标安装 + curl 远程安装
 └── README.md
+```
+
+每个 plugin 目录结构：
+
+```
+plugin-name/
+├── .claude-plugin/
+│   └── plugin.json               # Plugin 清单
+├── skills/
+│   └── plugin-name/
+│       ├── SKILL.md              # Skill 主定义
+│       ├── references/           # 参考文档（按需）
+│       └── scripts/              # 脚本（按需）
+├── commands/
+│   └── plugin-name.md            # 斜杠命令入口
+└── hooks/                        # Hook 配置（仅 Hook 类 plugin）
+    └── settings-snippet.json
 ```
 
 ## 设计原则
