@@ -58,6 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
    - `commands/wk-<name>.md`（frontmatter 中 `skill_file: skills/wk-<name>/SKILL.md`）
 2. **必须**在 `.claude-plugin/marketplace.json` 的 `plugins` 数组中添加条目（否则 Plugin Marketplace 无法发现该 Skill）
 3. 更新 `README.md`（Skills 表格、Commands 表格、安装命令列表、使用示例）
+4. 设计要符合skill 和 command 的最佳实践
 
 ## 现有 Skills / Hooks
 
@@ -68,6 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-symbol-reference-scan` | Skill | 全局符号引用扫描（源码/Headers/二进制） | 无 |
 | `wk-review` | Skill | 本地代码修改 Review（bug/crash/内存泄漏/性能） | 无 |
 | `wk-sync-pb` | Skill | 同步上游 proto 并重新生成 ObjC Protobuf 代码 | 无 |
+| `wk-lark-wiki` | Skill | iOS 组件库 API 文档生成、AI 润色与飞书上传 | 无 |
 | `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
 | `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
 

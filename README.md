@@ -12,6 +12,7 @@
 | `wk-review` | 本地代码修改 Review — 基于 git diff 审查 bug、crash、内存泄漏、性能问题 | 默认审查全部 diff | 无 |
 | `wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码 | 自动化流程（拉取→生成→检查→提交） | 无 |
 | `ios-blocked-words-check` | App Store 审核合规禁止关键词检查 — 智能匹配 60+ 高危敏感词 | 指定文件 / `--staged` / `--all` | 无 |
+| `wk-lark-wiki` | iOS 组件库 API 文档生成、AI 润色与飞书知识库上传 | `full` `generate` `polish` `upload` | 无 |
 
 ## Hooks
 
@@ -29,6 +30,7 @@
 | `/wk-review` | 对本地 git 修改进行代码审查，关注逻辑 bug、crash 风险、内存泄漏、性能问题 | `wk-review` |
 | `/wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码（含敏感词检查与自动提交） | `wk-sync-pb` |
 | `/ios-blocked-words-check` | 检查 iOS 源码中的 App Store 审核禁止关键词（赌博、支付、金融等敏感词） | `ios-blocked-words-check` |
+| `/wk-lark-wiki` | iOS 组件库 API 文档生成 + AI 润色 + 飞书知识库上传 | `wk-lark-wiki` |
 
 ## 安装
 
@@ -56,6 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install wk-sync-pb@yuxilong-skills
 /plugin install ios-blocked-words-check@yuxilong-skills
 /plugin install ios-blocked-words-hook@yuxilong-skills
+/plugin install wk-lark-wiki@yuxilong-skills
 ```
 
 ### 方式 3：手动安装
@@ -76,6 +79,7 @@ cd Skills
 ./install.sh wk-sync-pb
 ./install.sh ios-blocked-words-check
 ./install.sh ios-blocked-words-hook
+./install.sh wk-lark-wiki
 ```
 
 ## 使用
@@ -125,6 +129,22 @@ cd Skills
 /ios-blocked-words-check 帮我检查 SendGift.pbobjc.m 里有没有敏感词
 ```
 
+### wk-lark-wiki
+
+```
+# 完整流程：生成 + 润色 + 上传
+/wk-lark-wiki pods_dir=/path/to/Pods wiki_node=wikcnXXXX
+
+# 仅润色现有文档
+/wk-lark-wiki mode=polish
+
+# 处理单个组件
+/wk-lark-wiki component=BTBaseKit pods_dir=/path/to/Pods wiki_node=wikcnXXXX
+
+# 自然语言
+/wk-lark-wiki 帮我更新 BTBaseKit 的文档到飞书
+```
+
 ## 管理
 
 ```bash
@@ -147,6 +167,7 @@ Skills/
 │   ├── wk-symbol-reference-scan/ # 全局符号引用扫描
 │   ├── wk-review/                # 本地代码修改 Review
 │   ├── wk-sync-pb/               # Proto 同步与 ObjC 代码生成
+│   ├── wk-lark-wiki/             # API 文档生成、润色与飞书上传
 │   ├── ios-blocked-words-check/  # 禁止关键词检查 Skill
 │   └── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
 ├── install.sh                    # 双目标安装 + curl 远程安装

@@ -75,6 +75,16 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "wk-lark-wiki",
+      "description": "iOS 组件库 API 文档生成、AI 润色与飞书知识库上传一体化工作流",
+      "version": "1.0.0",
+      "source": "./plugins/wk-lark-wiki",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }
