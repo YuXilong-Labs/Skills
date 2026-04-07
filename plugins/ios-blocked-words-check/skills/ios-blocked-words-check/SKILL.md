@@ -1,6 +1,6 @@
 ---
 name: ios-blocked-words-check
-description: >
+description: |
   iOS App Store 审核合规禁止关键词检查工具。自动检测 iOS 源码(.h/.m/.mm/.swift)中的
   敏感词（赌博、支付、金融等 App Store 审核高危词），防止代码提交后被拒审。
   TRIGGER: 当编写、修改、生成任何 iOS 源码文件(.h/.m/.mm/.swift/.c/.cpp)时自动触发。

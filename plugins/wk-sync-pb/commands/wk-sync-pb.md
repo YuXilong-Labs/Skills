@@ -29,3 +29,5 @@ skill_file: skills/wk-sync-pb/SKILL.md
 ```
 
 在 BTProtobufMessages 项目根目录下执行即可。
+
+$ARGUMENTS

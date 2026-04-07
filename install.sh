@@ -68,6 +68,14 @@ list_skills() {
                     desc=$(sed -n '/^description:/,/^[^ ]/{ /^description:/{ s/^description:\s*//; /|/!p; }; /^  /{ s/^  //; p; q; }; }' "$skill_md" 2>/dev/null | head -1)
                     echo -e "  ${GREEN}●${NC} ${plugin_name}"
                     [ -n "$desc" ] && echo -e "    ${YELLOW}${desc}${NC}"
+                elif [ -d "$plugin_dir/hooks" ]; then
+                    # Hook 类 plugin（无 SKILL.md，有 hooks/ 目录）
+                    hook_desc=""
+                    if [ -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
+                        hook_desc=$(sed -n 's/.*"description":\s*"\(.*\)".*/\1/p' "$plugin_dir/.claude-plugin/plugin.json" 2>/dev/null | head -1)
+                    fi
+                    echo -e "  ${BLUE}⚡${NC} ${plugin_name} ${CYAN}(Hook)${NC}"
+                    [ -n "$hook_desc" ] && echo -e "    ${YELLOW}${hook_desc}${NC}"
                 else
                     echo -e "  ${RED}○${NC} ${plugin_name} (缺少 SKILL.md)"
                 fi
@@ -117,6 +125,41 @@ install_skill() {
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 agent: ${CYAN}$agents_dst/${NC}"
         fi
     done
+
+    # Hook 配置提示（需手动或自动合并到 settings.json）
+    if [ -f "$plugin_dir/hooks/settings-snippet.json" ]; then
+        local claude_settings="$HOME/.claude/settings.json"
+        echo
+        echo -e "${YELLOW}⚡ Hook 配置需合并到 Claude Code settings:${NC}"
+        if command -v jq >/dev/null 2>&1 && [ -f "$claude_settings" ]; then
+            # 自动合并 hook 配置
+            local snippet="$plugin_dir/hooks/settings-snippet.json"
+            local hooks_to_add
+            hooks_to_add=$(jq '.hooks.PostToolUse // []' "$snippet" 2>/dev/null)
+            if [ -n "$hooks_to_add" ] && [ "$hooks_to_add" != "[]" ]; then
+                local existing_hooks
+                existing_hooks=$(jq '.hooks.PostToolUse // []' "$claude_settings" 2>/dev/null)
+                # 检查是否已包含该 hook（通过 statusMessage 判断）
+                local status_msg
+                status_msg=$(jq -r '.[0].hooks[0].statusMessage // empty' <<< "$hooks_to_add" 2>/dev/null)
+                local already_exists
+                already_exists=$(jq --arg msg "$status_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $msg)] | length' "$claude_settings" 2>/dev/null)
+                if [ "${already_exists:-0}" -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} Hook 已存在于 settings.json，无需重复添加"
+                else
+                    jq --argjson newhooks "$hooks_to_add" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + $newhooks' "$claude_settings" > "${claude_settings}.tmp" \
+                        && mv "${claude_settings}.tmp" "$claude_settings" \
+                        && echo -e "  ${GREEN}✓${NC} 已自动合并 Hook 配置到 ${CYAN}$claude_settings${NC}" \
+                        || echo -e "  ${RED}✗${NC} 自动合并失败，请手动合并 ${CYAN}$snippet${NC}"
+                fi
+            fi
+        else
+            echo -e "  请手动将以下文件内容合并到 ${CYAN}$claude_settings${NC}:"
+            echo -e "  ${CYAN}$plugin_dir/hooks/settings-snippet.json${NC}"
+            [ ! -f "$claude_settings" ] && echo -e "  ${YELLOW}提示: settings.json 不存在，请先创建${NC}"
+            ! command -v jq >/dev/null 2>&1 && echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
+        fi
+    fi
 }
 
 uninstall_skill() {
@@ -156,6 +199,11 @@ uninstall_skill() {
             done
         fi
     done
+
+    # Hook 配置清理提示
+    if [ -f "$SCRIPT_DIR/plugins/$plugin_name/hooks/settings-snippet.json" ]; then
+        echo -e "${YELLOW}⚠ 请手动检查并移除 ~/.claude/settings.json 中该 Hook 的配置${NC}"
+    fi
 
     if [ "$removed" = false ]; then
         echo -e "${YELLOW}⚠ Skill '$plugin_name' 未安装${NC}"

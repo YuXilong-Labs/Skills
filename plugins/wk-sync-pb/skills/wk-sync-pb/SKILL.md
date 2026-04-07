@@ -1,6 +1,6 @@
 ---
 name: wk-sync-pb
-description: >
+description: |
   同步上游 proto submodule 并重新生成 ObjC Protobuf 代码的完整自动化工作流。
   TRIGGER: 用户执行 /wk-sync-pb 命令时触发。
   流程：拉取上游 proto → 生成 ObjC 代码 → 敏感词检查 → 用户确认 → 提交推送。
