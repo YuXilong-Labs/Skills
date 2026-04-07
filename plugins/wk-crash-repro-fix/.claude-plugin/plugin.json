@@ -1,0 +1,9 @@
+{
+  "name": "wk-crash-repro-fix",
+  "version": "1.0.0",
+  "description": "iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证全流程",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

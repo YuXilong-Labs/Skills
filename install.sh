@@ -108,6 +108,14 @@ install_skill() {
             cp "$plugin_dir/commands/"* "$commands_dst/"
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 command: ${CYAN}$commands_dst/${plugin_name}.md${NC}"
         fi
+
+        # 复制 agents/ 文件（Codex agent 配置）
+        if [ -d "$plugin_dir/agents" ]; then
+            local agents_dst="$target/agents"
+            mkdir -p "$agents_dst"
+            cp -r "$plugin_dir/agents/"* "$agents_dst/"
+            echo -e "${GREEN}✓${NC} [${target_name}] 已安装 agent: ${CYAN}$agents_dst/${NC}"
+        fi
     done
 }
 
@@ -131,6 +139,21 @@ uninstall_skill() {
             rm "$cmd_dst"
             echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 command: ${CYAN}$cmd_dst${NC}"
             removed=true
+        fi
+
+        # 卸载 agents/ 文件（按 plugin 源目录中的文件名逐个删除）
+        local plugin_agents_dir="$SCRIPT_DIR/plugins/$plugin_name/agents"
+        if [ -d "$plugin_agents_dir" ]; then
+            for agent_file in "$plugin_agents_dir"/*; do
+                local agent_basename
+                agent_basename=$(basename "$agent_file")
+                local agent_dst="$target/agents/$agent_basename"
+                if [ -f "$agent_dst" ]; then
+                    rm "$agent_dst"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 agent: ${CYAN}$agent_dst${NC}"
+                    removed=true
+                fi
+            done
         fi
     done
 

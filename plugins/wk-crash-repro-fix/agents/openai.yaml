@@ -1,0 +1,4 @@
+interface:
+  display_name: "iOS Crash 闭环排查"
+  short_description: "iOS crash triage, repro, fix, and regression workflow"
+  default_prompt: "Use $ios-crash-repro-fix-playbook to run crash root-cause analysis, build a stable repro test, implement the fix, and verify regression safety."

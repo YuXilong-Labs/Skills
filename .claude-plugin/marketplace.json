@@ -85,6 +85,16 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "wk-crash-repro-fix",
+      "description": "iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证全流程",
+      "version": "1.0.0",
+      "source": "./plugins/wk-crash-repro-fix",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }

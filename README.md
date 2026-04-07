@@ -13,6 +13,7 @@
 | `wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码 | 自动化流程（拉取→生成→检查→提交） | 无 |
 | `ios-blocked-words-check` | App Store 审核合规禁止关键词检查 — 智能匹配 60+ 高危敏感词 | 指定文件 / `--staged` / `--all` | 无 |
 | `wk-lark-wiki` | iOS 组件库 API 文档生成、AI 润色与飞书知识库上传 | `full` `generate` `polish` `upload` | 无 |
+| `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 
 ## Hooks
 
@@ -31,6 +32,7 @@
 | `/wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码（含敏感词检查与自动提交） | `wk-sync-pb` |
 | `/ios-blocked-words-check` | 检查 iOS 源码中的 App Store 审核禁止关键词（赌博、支付、金融等敏感词） | `ios-blocked-words-check` |
 | `/wk-lark-wiki` | iOS 组件库 API 文档生成 + AI 润色 + 飞书知识库上传 | `wk-lark-wiki` |
+| `/wk-crash-repro-fix` | iOS Crash 端到端闭环排查（根因→复现→修复→回归） | `wk-crash-repro-fix` |
 
 ## 安装
 
@@ -59,6 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install ios-blocked-words-check@yuxilong-skills
 /plugin install ios-blocked-words-hook@yuxilong-skills
 /plugin install wk-lark-wiki@yuxilong-skills
+/plugin install wk-crash-repro-fix@yuxilong-skills
 ```
 
 ### 方式 3：手动安装
@@ -80,7 +83,7 @@ cd Skills
 ./install.sh ios-blocked-words-check
 ./install.sh ios-blocked-words-hook
 ./install.sh wk-lark-wiki
-```
+./install.sh wk-crash-repro-fix
 
 ## 使用
 
@@ -127,6 +130,7 @@ cd Skills
 /wk-review 帮我审查一下这次改动有没有内存泄漏
 /wk-sync-pb 同步一下上游 proto 并重新生成代码
 /ios-blocked-words-check 帮我检查 SendGift.pbobjc.m 里有没有敏感词
+/wk-crash-repro-fix 帮我分析这个 crash，EXC_BAD_ACCESS 在 dealloc 时触发
 ```
 
 ### wk-lark-wiki
@@ -143,6 +147,21 @@ cd Skills
 
 # 自然语言
 /wk-lark-wiki 帮我更新 BTBaseKit 的文档到飞书
+```
+
+### wk-crash-repro-fix
+
+```
+# 提供崩溃栈分析
+/wk-crash-repro-fix crash_type=EXC_BAD_ACCESS stack="BTDNSManager dealloc thread:bg"
+
+# 指定场景复现
+/wk-crash-repro-fix scenario=前后台切换时DNS定时器野指针 scheme=BTNetwork-Example
+
+# 自然语言
+/wk-crash-repro-fix 帮我分析这个 crash，EXC_BAD_ACCESS 在 BTDNSManager dealloc 时触发
+/wk-crash-repro-fix 先写一个稳定复现用例，定时器和 dealloc 竞态
+/wk-crash-repro-fix 开始修复并验证，跑高压回归
 ```
 
 ## 管理
@@ -168,6 +187,7 @@ Skills/
 │   ├── wk-review/                # 本地代码修改 Review
 │   ├── wk-sync-pb/               # Proto 同步与 ObjC 代码生成
 │   ├── wk-lark-wiki/             # API 文档生成、润色与飞书上传
+│   ├── wk-crash-repro-fix/       # iOS Crash 闭环排查
 │   ├── ios-blocked-words-check/  # 禁止关键词检查 Skill
 │   └── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
 ├── install.sh                    # 双目标安装 + curl 远程安装
@@ -187,6 +207,8 @@ plugin-name/
 │       └── scripts/              # 脚本（按需）
 ├── commands/
 │   └── plugin-name.md            # 斜杠命令入口
+├── agents/                       # Codex agent 配置（按需）
+│   └── openai.yaml
 └── hooks/                        # Hook 配置（仅 Hook 类 plugin）
     └── settings-snippet.json
 ```
