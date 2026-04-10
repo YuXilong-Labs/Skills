@@ -14,6 +14,7 @@
 | `ios-blocked-words-check` | App Store 审核合规禁止关键词检查 — 智能匹配 60+ 高危敏感词 | 指定文件 / `--staged` / `--all` | 无 |
 | `wk-lark-wiki` | iOS 组件库 API 文档生成、AI 润色与飞书知识库上传 | `full` `generate` `polish` `upload` | 无 |
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
+| `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
 
 ## Hooks
 
@@ -33,6 +34,7 @@
 | `/ios-blocked-words-check` | 检查 iOS 源码中的 App Store 审核禁止关键词（赌博、支付、金融等敏感词） | `ios-blocked-words-check` |
 | `/wk-lark-wiki` | iOS 组件库 API 文档生成 + AI 润色 + 飞书知识库上传 | `wk-lark-wiki` |
 | `/wk-crash-repro-fix` | iOS Crash 端到端闭环排查（根因→复现→修复→回归） | `wk-crash-repro-fix` |
+| `/wk-gh-pr-review-fix` | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | `wk-gh-pr-review-fix` |
 
 ## 安装
 
@@ -62,6 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install ios-blocked-words-hook@yuxilong-skills
 /plugin install wk-lark-wiki@yuxilong-skills
 /plugin install wk-crash-repro-fix@yuxilong-skills
+/plugin install wk-gh-pr-review-fix@yuxilong-skills
 ```
 
 ### 方式 3：手动安装
@@ -84,6 +87,7 @@ cd Skills
 ./install.sh ios-blocked-words-hook
 ./install.sh wk-lark-wiki
 ./install.sh wk-crash-repro-fix
+./install.sh wk-gh-pr-review-fix
 
 ## 使用
 
@@ -131,6 +135,7 @@ cd Skills
 /wk-sync-pb 同步一下上游 proto 并重新生成代码
 /ios-blocked-words-check 帮我检查 SendGift.pbobjc.m 里有没有敏感词
 /wk-crash-repro-fix 帮我分析这个 crash，EXC_BAD_ACCESS 在 dealloc 时触发
+/wk-gh-pr-review-fix 拉一下当前 PR review 结果并修复
 ```
 
 ### wk-lark-wiki
@@ -164,6 +169,22 @@ cd Skills
 /wk-crash-repro-fix 开始修复并验证，跑高压回归
 ```
 
+### wk-gh-pr-review-fix
+
+```
+# 默认处理当前分支 PR 的 unresolved actionable review
+/wk-gh-pr-review-fix
+
+# 只查看当前状态
+/wk-gh-pr-review-fix mode=inspect
+
+# 指定 PR
+/wk-gh-pr-review-fix repo=YuXilong-Labs/LLVM-Hikari pr=14
+
+# 自然语言
+/wk-gh-pr-review-fix 拉取当前 PR review 结果并修复、本地验证后推送并标记解决
+```
+
 ## 管理
 
 ```bash
@@ -188,6 +209,7 @@ Skills/
 │   ├── wk-sync-pb/               # Proto 同步与 ObjC 代码生成
 │   ├── wk-lark-wiki/             # API 文档生成、润色与飞书上传
 │   ├── wk-crash-repro-fix/       # iOS Crash 闭环排查
+│   ├── wk-gh-pr-review-fix/      # GitHub PR review 闭环处理
 │   ├── ios-blocked-words-check/  # 禁止关键词检查 Skill
 │   └── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
 ├── install.sh                    # 双目标安装 + curl 远程安装

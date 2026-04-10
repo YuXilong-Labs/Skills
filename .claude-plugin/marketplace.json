@@ -95,6 +95,16 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "wk-gh-pr-review-fix",
+      "description": "GitHub PR review 闭环处理 — 拉取 unresolved review threads，修复、本地验证、推送并在线程中回复解决",
+      "version": "1.0.0",
+      "source": "./plugins/wk-gh-pr-review-fix",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }

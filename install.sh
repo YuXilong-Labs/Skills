@@ -63,9 +63,30 @@ list_skills() {
             if [ -d "$plugin_dir" ]; then
                 plugin_name=$(basename "$plugin_dir")
                 # 在 plugin 子目录中找 SKILL.md
-                skill_md=$(find "$plugin_dir/skills" -name "SKILL.md" -maxdepth 2 2>/dev/null | head -1)
+                skill_md=""
+                if [ -d "$plugin_dir/skills" ]; then
+                    skill_md=$(find "$plugin_dir/skills" -name "SKILL.md" -maxdepth 2 2>/dev/null | head -1 || true)
+                fi
                 if [ -n "$skill_md" ] && [ -f "$skill_md" ]; then
-                    desc=$(sed -n '/^description:/,/^[^ ]/{ /^description:/{ s/^description:\s*//; /|/!p; }; /^  /{ s/^  //; p; q; }; }' "$skill_md" 2>/dev/null | head -1)
+                    desc=$(awk '
+                        /^description:/ {
+                            sub(/^description:[[:space:]]*/, "", $0)
+                            if ($0 != "|" && $0 != "") {
+                                print
+                                exit
+                            }
+                            multiline = 1
+                            next
+                        }
+                        multiline && /^  / {
+                            sub(/^  /, "", $0)
+                            print
+                            exit
+                        }
+                        multiline {
+                            exit
+                        }
+                    ' "$skill_md" 2>/dev/null || true)
                     echo -e "  ${GREEN}●${NC} ${plugin_name}"
                     [ -n "$desc" ] && echo -e "    ${YELLOW}${desc}${NC}"
                 elif [ -d "$plugin_dir/hooks" ]; then

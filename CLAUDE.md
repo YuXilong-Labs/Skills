@@ -71,6 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-sync-pb` | Skill | 同步上游 proto 并重新生成 ObjC Protobuf 代码 | 无 |
 | `wk-lark-wiki` | Skill | iOS 组件库 API 文档生成、AI 润色与飞书上传 | 无 |
 | `wk-crash-repro-fix` | Skill | iOS Crash 闭环排查（根因→复现→修复→回归验证） | 无 |
+| `wk-gh-pr-review-fix` | Skill | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | 无 |
 | `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
 | `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
 
