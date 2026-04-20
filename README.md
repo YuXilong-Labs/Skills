@@ -12,7 +12,8 @@
 | `wk-review` | 本地代码修改 Review — 基于 git diff 审查 bug、crash、内存泄漏、性能问题 | 默认审查全部 diff | 无 |
 | `wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码 | 自动化流程（拉取→生成→检查→提交） | 无 |
 | `ios-blocked-words-check` | App Store 审核合规禁止关键词检查 — 智能匹配 60+ 高危敏感词 | 指定文件 / `--staged` / `--all` | 无 |
-| `wk-lark-wiki` | iOS 组件库 API 文档生成、AI 润色与飞书知识库上传 | `full` `generate` `polish` `upload` | 无 |
+| `wk-lark-wiki` | iOS 组件库 API 文档生成、AI 润色与飞书知识库上传（单组件） | `full` `generate` `polish` `upload` | 无 |
+| `wk-lark-wiki-batch` | 批量生成 main 分支基础组件 API 文档，默认 Haiku 深度润色并上传飞书 Wiki | 批量（固定流程） | 无 |
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
 
@@ -32,7 +33,8 @@
 | `/wk-review` | 对本地 git 修改进行代码审查，关注逻辑 bug、crash 风险、内存泄漏、性能问题 | `wk-review` |
 | `/wk-sync-pb` | 同步上游 proto submodule 并重新生成 ObjC Protobuf 代码（含敏感词检查与自动提交） | `wk-sync-pb` |
 | `/ios-blocked-words-check` | 检查 iOS 源码中的 App Store 审核禁止关键词（赌博、支付、金融等敏感词） | `ios-blocked-words-check` |
-| `/wk-lark-wiki` | iOS 组件库 API 文档生成 + AI 润色 + 飞书知识库上传 | `wk-lark-wiki` |
+| `/wk-lark-wiki` | iOS 组件库 API 文档生成 + AI 润色 + 飞书知识库上传（单组件） | `wk-lark-wiki` |
+| `/wk-lark-wiki-batch` | 批量 main 分支基础组件文档生成 + Haiku 润色 + 飞书上传 | `wk-lark-wiki-batch` |
 | `/wk-crash-repro-fix` | iOS Crash 端到端闭环排查（根因→复现→修复→回归） | `wk-crash-repro-fix` |
 | `/wk-gh-pr-review-fix` | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | `wk-gh-pr-review-fix` |
 
@@ -153,6 +155,34 @@ cd Skills
 # 自然语言
 /wk-lark-wiki 帮我更新 BTBaseKit 的文档到飞书
 ```
+
+### wk-lark-wiki-batch
+
+批量处理 `mcp-ios-components` 项目下所有基础组件（只处理本地 `main` 分支），自动 `git pull --ff-only`，默认使用本地 Claude Code Haiku 对整份 Markdown 做深度润色并同步到飞书 Wiki。
+
+```
+# 默认：Haiku 深度润色 + 上传
+/wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX
+
+# 预览（不真正调用 lark-cli）
+/wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX preview=true
+
+# 跳过 Haiku 润色
+/wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX no_polish=true
+
+# 只处理指定组件（调试）
+/wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX component=BTBaseKit
+
+# 自然语言
+/wk-lark-wiki-batch 把所有 main 分支的基础组件文档更新到飞书
+```
+
+关键行为：
+- 仅处理本地分支为 `main` 的基础组件；发现规则与 `mcp-ios-components` 服务启动一致
+- 处理前自动 `git pull --ff-only`，拉取远端最新代码
+- 默认 Haiku 整文档润色输出到 `docs/api/polished/`，失败回退原始文档
+- 按 update-or-create 逻辑上传到同一 `wiki_node`
+- 单组件失败不中断整批；末尾打印成功 / 跳过 / 失败 三类汇总
 
 ### wk-crash-repro-fix
 
