@@ -161,14 +161,17 @@ cd Skills
 批量处理 `mcp-ios-components` 项目下所有基础组件（只处理本地 `main` 分支），自动 `git pull --ff-only`，默认使用本地 Claude Code Haiku 对整份 Markdown 做深度润色并同步到飞书 Wiki。
 
 ```
-# 默认：Haiku 深度润色 + 上传
+# 默认：Haiku 深度润色 + 上传（未变更组件自动跳过）
 /wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX
 
-# 预览（不真正调用 lark-cli）
+# 预览（不真正调用 lark-cli，也不写任何缓存）
 /wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX preview=true
 
 # 跳过 Haiku 润色
 /wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX no_polish=true
+
+# 无视 hash 强制重做
+/wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX force=true
 
 # 只处理指定组件（调试）
 /wk-lark-wiki-batch pods_dir=/path/to/Pods wiki_node=wikcnXXXX component=BTBaseKit
@@ -180,9 +183,11 @@ cd Skills
 关键行为：
 - 仅处理本地分支为 `main` 的基础组件；发现规则与 `mcp-ios-components` 服务启动一致
 - 处理前自动 `git pull --ff-only`，拉取远端最新代码
-- 默认 Haiku 整文档润色输出到 `docs/api/polished/`，失败回退原始文档
+- **缓存落在组件内部** `<pods_dir>/<component>/.wk-lark-wiki/`（`raw.md` / `polished.md` / `source-checksums.json` / `raw-checksum.json` / `wiki-mapping.json`），由各组件 git 仓库追踪，不加 `.gitignore`
+- **差异化更新**：源码 hash 完全未变且已有 wiki 映射 → 整组件跳过；源码有变 → 文件级增量合并章节；`raw.md` 未变 → 复用现有 `polished.md`，不调用 Haiku
+- Haiku 整文档润色失败不中断整批，回退原始 `raw.md`
 - 按 update-or-create 逻辑上传到同一 `wiki_node`
-- 单组件失败不中断整批；末尾打印成功 / 跳过 / 失败 三类汇总
+- 单组件失败不中断整批；末尾打印 `成功 / 未变跳过 / 非 main 跳过 / 失败` 四类汇总
 
 ### wk-crash-repro-fix
 
