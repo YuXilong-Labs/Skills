@@ -43,9 +43,8 @@ Claude Code 使用 MCP ios-components 工具直接生成文档：
 2. **逐类获取详情**：对每个类/协议调用 `get_class_detail(component_name, classname)`
    - 批量调用：每条消息中并行发出多个 `get_class_detail` 调用（提升效率）
 3. **补充实现细节**：对复杂初始化器、枚举值、核心方法调用 `read_source(component_name, file, start, end)` 获取源码
-4. **获取调用示例**：调用 `find_usage_example(component_name)` 获取其他组件的真实使用样例
-5. **组装文档**：按 [lark-doc-template.md](lark-doc-template.md) 模板结构组装 Markdown
-6. **写入文件**：使用 Write 工具写入 `docs/api/<ComponentName>.md`
+4. **组装文档**：按 [lark-doc-template.md](lark-doc-template.md) 模板结构组装 Markdown
+5. **写入文件**：使用 Write 工具写入 `docs/api/<ComponentName>.md`
 
 **关键约束：**
 - 排除 `Example/` 目录下的所有文件

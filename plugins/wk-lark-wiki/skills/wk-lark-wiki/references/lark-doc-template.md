@@ -174,17 +174,4 @@ typedef NS_ENUM(NSInteger, BTRouterOpenMode) {
 
 ---
 
-## 调用示例
-
-### 来自 `BTLiveRoom/BTLiveRoomRouter.m`
-
-```objc
-L12: #import <BTRouter/BTRouter.h>
-L45: [BTRouter registerURL:@"bt://live/room" toHandler:^(NSDictionary *params) {
-L48:     BTLiveRoomVC *vc = [[BTLiveRoomVC alloc] initWithRoomId:params[@"roomId"]];
-L49:     [BTRouter pushViewController:vc animated:YES];
-```
-
----
-
 *文档自动生成于 2026-03-31 12:00，经 AI 润色优化*

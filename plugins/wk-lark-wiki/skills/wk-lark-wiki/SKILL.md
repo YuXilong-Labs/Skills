@@ -99,7 +99,7 @@ description: |
 1. **源码增量检测** — 计算源码 hash 与 `docs/api/.source-checksums.json` 比对，仅处理有变更的文件
 2. **文档生成**（分两条路径）：
    - **mcp-ios-components 上下文** → 执行 `python tools/generate_api_docs.py`
-   - **CocoaPods 组件上下文** → 使用 MCP 工具链：`get_component_api` → `get_class_detail` → `read_source` → `find_usage_example`
+   - **CocoaPods 组件上下文** → 使用 MCP 工具链：`get_component_api` → `get_class_detail` → `read_source`
 3. **生成文件目录架构图** — 每份文档必须包含 `## 文件目录` 章节（含用途注释）
 4. **更新源码 checksums** — 写入 `docs/api/.source-checksums.json`
 
