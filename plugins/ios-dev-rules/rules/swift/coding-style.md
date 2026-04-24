@@ -76,7 +76,48 @@ func fetch(from source: any DataSource) async throws -> some View {
 }
 ```
 
-## Access Control
+## Comments
+
+Every class, property, public method, and non-trivial logic block must have a `///` doc comment. Use `//` for inline logic notes:
+
+```swift
+/// 红包弹窗视图
+class RedPacketView: UIView {
+
+    /// 红包icon
+    private let iconView = UIImageView()
+
+    /// 金额标签
+    private let amountLabel = UILabel()
+
+    /// 显示红包弹窗
+    /// - Parameters:
+    ///   - amount: 红包金额（单位：分）
+    ///   - animated: 是否带动画
+    func show(amount: Int, animated: Bool) {
+        // 金额为0时不展示弹窗
+        guard amount > 0 else { return }
+
+        // 先更新UI再执行动画，避免闪烁
+        amountLabel.text = "\(amount / 100)"
+        performShowAnimation(animated: animated)
+    }
+}
+```
+
+Enum case comments:
+
+```swift
+/// 布局模式
+enum LayoutMode {
+    /// 不支持
+    case none
+    /// 网格布局
+    case grid
+    /// 列表布局
+    case list
+}
+```
 
 - `internal` by default — no annotation needed
 - Mark `public` explicitly at API boundaries (frameworks, SPM targets)

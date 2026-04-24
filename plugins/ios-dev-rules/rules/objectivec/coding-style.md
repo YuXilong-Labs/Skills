@@ -43,9 +43,12 @@ Memory management rules:
 
 ## Brace Style
 
-Method definitions: opening brace on **next line**. Control statements: opening brace on **same line**:
+Method/function definitions: opening brace **must** be on the **next line** (Allman style). This is mandatory — never place the opening brace on the same line as the method signature:
+
+Control statements (`if`/`else`/`for`/`while`/`switch`): opening brace on **same line** (K&R style):
 
 ```objc
+// CORRECT — method brace on next line
 - (instancetype)initWithFrame:(CGRect)frame mode:(XXLayoutMode)mode
 {
     self = [super initWithFrame:frame];
@@ -55,6 +58,24 @@ Method definitions: opening brace on **next line**. Control statements: opening 
         [self initializeViewsAction];
     }
     return self;
+}
+
+// CORRECT — getter brace on next line
+- (NSUInteger)itemCount
+{
+    return _items.count;
+}
+
+// CORRECT — control statement brace on same line
+if (condition) {
+    // ...
+} else {
+    // ...
+}
+
+// WRONG — method brace on same line
+- (void)updateUI {
+    // ...
 }
 ```
 
@@ -210,12 +231,69 @@ __weak __typeof(self)weakSelf = self;
 }];
 ```
 
+## Property Access Style
+
+Prefer ivar (`_propertyName`) over `self.propertyName` in implementation files. Use `self.` only when necessary:
+
+```objc
+// CORRECT — direct ivar access in normal code
+_contentView = [[UIView alloc] init];
+_contentView.hidden = YES;
+[self addSubview:_contentView];
+
+// CORRECT — self. required inside blocks (weakSelf/strongSelf pattern)
+__weak __typeof(self)weakSelf = self;
+[self fetchDataWithCompletion:^{
+    weakSelf.contentView.hidden = NO;
+}];
+
+// CORRECT — self. in KVO-observed or custom setter/getter scenarios
+self.mode = XXLayoutMode_Grid;  // triggers custom setter
+
+// WRONG — unnecessary self. in normal implementation code
+self.contentView = [[UIView alloc] init];
+self.contentView.hidden = YES;
+```
+
 ## Comments
 
-- `///` for doc comments on classes, properties, public methods
-- `///<` for inline enum value comments
-- `//` for implementation notes
-- `// MARK:` or `#pragma mark` for section dividers (prefer `#pragma mark`)
+Every class, property, public method, and non-trivial logic block must have a comment. Use `///` for doc comments, `///<` for inline enum values, `//` for logic notes:
+
+```objc
+/// 红包弹窗视图
+@interface XXRedPacketView : UIView
+
+/// 红包icon
+@property(nonatomic, strong) UIImageView *iconView;
+
+/// 金额标签
+@property(nonatomic, strong) UILabel *amountLabel;
+
+/// 显示红包弹窗
+/// - Parameters:
+///   - amount: 红包金额（单位：分）
+///   - animated: 是否带动画
+- (void)showWithAmount:(NSInteger)amount animated:(BOOL)animated;
+
+@end
+```
+
+Logic comments for non-obvious code paths:
+
+```objc
+- (void)updateSeatModel:(XXSeatModel *)seatModel
+{
+    // 服务端偶发没有uid字段，需要防护
+    if (!NSStringIsVaild(seatModel.uid)) return;
+
+    // 同一用户切换麦位时，先停旧麦位的视频再启新麦位
+    if (oldSeatView && oldSeatView != seatView) {
+        [self stopPlayingAtSeatView:oldSeatView];
+    }
+}
+```
+
+Enum inline comments:
 
 ```objc
 /// 布局模式
