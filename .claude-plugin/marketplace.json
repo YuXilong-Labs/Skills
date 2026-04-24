@@ -105,6 +105,16 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "ios-dev-rules",
+      "description": "iOS 开发规则包 — 覆盖 Objective-C、Swift、Ruby（CocoaPods/Fastlane）三语言编码规范",
+      "version": "1.0.0",
+      "source": "./plugins/ios-dev-rules",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }

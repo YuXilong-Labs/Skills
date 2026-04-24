@@ -97,6 +97,14 @@ list_skills() {
                     fi
                     echo -e "  ${BLUE}⚡${NC} ${plugin_name} ${CYAN}(Hook)${NC}"
                     [ -n "$hook_desc" ] && echo -e "    ${YELLOW}${hook_desc}${NC}"
+                elif [ -d "$plugin_dir/rules" ]; then
+                    # Rules 类 plugin（无 SKILL.md，有 rules/ 目录）
+                    rules_desc=""
+                    if [ -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
+                        rules_desc=$(sed -n 's/.*"description":\s*"\(.*\)".*/\1/p' "$plugin_dir/.claude-plugin/plugin.json" 2>/dev/null | head -1)
+                    fi
+                    echo -e "  ${BLUE}📋${NC} ${plugin_name} ${CYAN}(Rules)${NC}"
+                    [ -n "$rules_desc" ] && echo -e "    ${YELLOW}${rules_desc}${NC}"
                 else
                     echo -e "  ${RED}○${NC} ${plugin_name} (缺少 SKILL.md)"
                 fi
@@ -144,6 +152,38 @@ install_skill() {
             mkdir -p "$agents_dst"
             cp -r "$plugin_dir/agents/"* "$agents_dst/"
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 agent: ${CYAN}$agents_dst/${NC}"
+        fi
+
+        # 复制 rules/ 子目录（编码规范规则）
+        if [ -d "$plugin_dir/rules" ]; then
+            local rules_dst="$target/rules"
+            mkdir -p "$rules_dst"
+            if [ "$target_name" = ".claude" ]; then
+                # Claude Code：按语言目录复制（支持 paths frontmatter）
+                cp -r "$plugin_dir/rules/"* "$rules_dst/"
+                echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$rules_dst/${NC}"
+            elif [ "$target_name" = ".codex" ]; then
+                # Codex CLI：合并为单文件（Codex 不支持分目录 rules）
+                local merged="$rules_dst/${plugin_name}.md"
+                echo "# iOS Development Rules (auto-generated)" > "$merged"
+                echo "" >> "$merged"
+                for lang_dir in "$plugin_dir/rules"/*/; do
+                    if [ -d "$lang_dir" ]; then
+                        local lang_name
+                        lang_name=$(basename "$lang_dir")
+                        echo "---" >> "$merged"
+                        echo "## $lang_name" >> "$merged"
+                        echo "" >> "$merged"
+                        for rule_file in "$lang_dir"*.md; do
+                            [ -f "$rule_file" ] || continue
+                            # 跳过 frontmatter，只保留正文
+                            awk 'BEGIN{skip=0} /^---$/{skip++; next} skip>=2{print}' "$rule_file" >> "$merged"
+                            echo "" >> "$merged"
+                        done
+                    fi
+                done
+                echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$merged${NC}"
+            fi
         fi
     done
 
@@ -218,6 +258,31 @@ uninstall_skill() {
                     removed=true
                 fi
             done
+        fi
+
+        # 卸载 rules/ 目录（按 plugin 源目录中的语言子目录逐个删除）
+        local plugin_rules_dir="$SCRIPT_DIR/plugins/$plugin_name/rules"
+        if [ -d "$plugin_rules_dir" ]; then
+            if [ "$target_name" = ".claude" ]; then
+                for lang_dir in "$plugin_rules_dir"/*/; do
+                    [ -d "$lang_dir" ] || continue
+                    local lang_name
+                    lang_name=$(basename "$lang_dir")
+                    local rules_dst="$target/rules/$lang_name"
+                    if [ -d "$rules_dst" ]; then
+                        rm -rf "$rules_dst"
+                        echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 rules: ${CYAN}$rules_dst${NC}"
+                        removed=true
+                    fi
+                done
+            elif [ "$target_name" = ".codex" ]; then
+                local merged_dst="$target/rules/${plugin_name}.md"
+                if [ -f "$merged_dst" ]; then
+                    rm "$merged_dst"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 rules: ${CYAN}$merged_dst${NC}"
+                    removed=true
+                fi
+            fi
         fi
     done
 

@@ -74,6 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-gh-pr-review-fix` | Skill | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | 无 |
 | `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
 | `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
+| `ios-dev-rules` | Rules | iOS 三语言编码规范（ObjC/Swift/Ruby），安装到 ~/.claude/rules/ | 无 |
 
 > **注意**：所有 plugin 必须在 `.claude-plugin/marketplace.json` 中注册，否则 Plugin Marketplace 无法发现。
 
