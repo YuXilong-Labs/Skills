@@ -12,6 +12,7 @@ paths:
 
 - **clang-format** for auto-formatting — commit `.clang-format` to repo root
 - Run `clang-format -i <file>` on save or via PostToolUse hook
+- Indent width: **4 spaces** (not 2). Configure in `.clang-format`: `IndentWidth: 4`
 
 ## Naming
 

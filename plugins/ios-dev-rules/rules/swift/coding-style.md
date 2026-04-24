@@ -11,6 +11,7 @@ paths:
 
 - **SwiftFormat** for auto-formatting, **SwiftLint** for style enforcement
 - `swift-format` is bundled with Xcode 16+ as an alternative
+- Indent width: **4 spaces** (not 2). Configure in `.swiftformat`: `--indent 4`
 
 ## Immutability
 
