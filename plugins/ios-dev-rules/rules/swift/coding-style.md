@@ -82,3 +82,21 @@ func fetch(from source: any DataSource) async throws -> some View {
 - Mark `public` explicitly at API boundaries (frameworks, SPM targets)
 - Use `package` access (Swift 5.9+) for cross-module visibility within a package
 - Prefer `private` over `fileprivate` unless file-scope sharing is required
+
+## Auto Layout Constraints
+
+Use **SnapKit** for constraint setup. Always use `leading`/`trailing` for horizontal constraints — never `left`/`right` (RTL language support):
+
+```swift
+// CORRECT
+contentView.snp.makeConstraints { make in
+    make.leading.equalToSuperview().offset(16)
+    make.trailing.equalToSuperview().offset(-16)
+}
+
+// WRONG — breaks RTL layout
+contentView.snp.makeConstraints { make in
+    make.left.equalToSuperview().offset(16)
+    make.right.equalToSuperview().offset(-16)
+}
+```

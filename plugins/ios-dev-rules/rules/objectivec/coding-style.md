@@ -165,6 +165,22 @@ Three-phase init: create subviews → layout constraints → bind actions:
         make.edges.mas_equalTo(UIEdgeInsetsZero);
     }];
 }
+```
+
+## Auto Layout Constraints
+
+Use **Masonry** for constraint setup. Always use `leading`/`trailing` for horizontal constraints — never `left`/`right` (RTL language support):
+
+```objc
+// CORRECT
+make.leading.mas_equalTo(16.0);
+make.trailing.mas_equalTo(-16.0);
+make.leading.and.trailing.mas_equalTo(0.0);
+
+// WRONG — breaks RTL layout
+make.left.mas_equalTo(16.0);
+make.right.mas_equalTo(-16.0);
+```
 
 - (void)initializeViewsAction
 {
