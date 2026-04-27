@@ -27,14 +27,27 @@ paths:
 
 ## Property Declaration
 
-No space between `@property` and `(`. Modifier order: `nonatomic`, memory, nullability, readwrite/readonly:
+No space between `@property` and `(`. Modifier order: `nonatomic`, memory, nullability, readwrite/readonly.
+
+每个属性与其 `///` 注释之间空一行，提升可读性：
 
 ```objc
+/// 内容容器
 @property(nonatomic, strong) UIView *contentView;
+
+/// 标题
 @property(nonatomic, copy) NSString *title;
+
+/// 是否可用
 @property(nonatomic, assign, readonly) BOOL isEnabled;
+
+/// 代理
 @property(nonatomic, weak) id<XXContainerViewDelegate> delegate;
+
+/// 完成回调
 @property(nonatomic, copy) void (^completionBlock)(void);
+
+/// 提示浮层
 @property(nonatomic, strong, nullable) XXOverlayTipsView *tipsView;
 ```
 
