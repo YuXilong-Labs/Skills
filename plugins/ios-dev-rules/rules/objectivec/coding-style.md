@@ -343,6 +343,31 @@ Use generics for all collection properties:
 @property(nonatomic, strong) NSArray<XXItemModel *> *items;
 ```
 
+## Collection Initialization
+
+非静态数据禁止使用字面量 `@[]` / `@{}` 初始化集合。字面量仅用于编译期已知的静态常量。动态数据必须使用 `NSMutableArray` / `NSMutableDictionary` 逐个添加：
+
+```objc
+// CORRECT — 静态常量可以用字面量
+static NSArray *const kSupportedTypes = @[@"type1", @"type2", @"type3"];
+
+// CORRECT — 动态数据用 mutable + addObject
+NSMutableArray *items = [NSMutableArray array];
+for (XXModel *model in dataList) {
+    if (model.isValid) {
+        [items addObject:model];
+    }
+}
+
+NSMutableDictionary *params = [NSMutableDictionary dictionary];
+params[@"uid"] = uid;
+params[@"ts"] = @(timestamp);
+
+// WRONG — 动态数据用字面量，元素可能为 nil 导致 crash
+NSArray *items = @[model1, model2, model3];
+NSDictionary *params = @{@"uid": uid, @"ts": @(timestamp)};
+```
+
 ## Dealloc
 
 Every class should implement `dealloc` with debug logging and cleanup:
