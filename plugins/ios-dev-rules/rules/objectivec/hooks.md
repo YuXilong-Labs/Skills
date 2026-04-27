@@ -10,21 +10,23 @@ paths:
 
 ## PostToolUse Hooks
 
-Configure in `~/.claude/settings.json`:
+安装 `ios-dev-rules` 时会自动合并到 `~/.claude/settings.json`（需要 jq）。
 
-- **clang-format**: Auto-format `.h`, `.m`, `.mm` files after edit
+- **clang-format**: Edit/Write `.h`, `.m`, `.mm` 文件后自动格式化
+- 配置文件路径：`~/.claude/rules/objectivec/.clang-format`
+- 使用 `-style=file:<path>` 显式指定，无需项目目录下存在 `.clang-format`
 
 ```json
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "command": "clang-format -i \"$TOOL_ARG_file_path\"",
-        "filePattern": "\\.(h|m|mm)$"
-      }
-    ]
-  }
+  "matcher": "Edit|Write",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.h|*.m|*.mm) clang-format -style=\"file:$HOME/.claude/rules/objectivec/.clang-format\" -i \"$f\" 2>/dev/null ;; esac; }",
+      "timeout": 15,
+      "statusMessage": "ObjC clang-format 格式化中..."
+    }
+  ]
 }
 ```
 

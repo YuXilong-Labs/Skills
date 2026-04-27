@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; case \"$f\" in *.h|*.m|*.mm) clang-format -style=\"file:$HOME/.claude/rules/objectivec/.clang-format\" -i \"$f\" 2>/dev/null ;; esac; }",
+            "timeout": 15,
+            "statusMessage": "ObjC clang-format 格式化中..."
+          }
+        ]
+      }
+    ]
+  }
+}
