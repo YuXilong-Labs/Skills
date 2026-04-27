@@ -143,3 +143,95 @@ contentView.snp.makeConstraints { make in
     make.right.equalToSuperview().offset(-16)
 }
 ```
+
+## Import Order
+
+import 顺序必须为：系统库 → 第三方库 → 内部组件，避免编译顺序问题导致符号覆盖：
+
+```swift
+// CORRECT
+import UIKit
+import Foundation
+
+import SnapKit
+import Kingfisher
+
+import XXFoundation
+import XXUIKit
+```
+
+## Optional Safety
+
+优先使用 `if let` / `guard let` 安全解包，避免滥用强制解包 `!`。隐式解包 `!` 仅限 `@IBOutlet` 等确定已初始化的场景：
+
+```swift
+// CORRECT — guard let 提前返回
+guard let nickname = userInfo["nickname"] as? String else { return }
+print(nickname)
+
+// CORRECT — if let 可选绑定
+if let data = response.data {
+    process(data)
+}
+
+// WRONG — 强制解包，值为 nil 时 crash
+let name = userInfo["name"] as! String
+```
+
+## Class / Struct Member Order
+
+类或结构体内部按以下顺序组织成员：
+
+1. 私有属性
+2. 公共属性
+3. 生命周期方法（init / deinit / viewDidLoad 等）
+4. 私有方法
+5. 公共方法
+
+```swift
+class ProfileViewController: UIViewController {
+
+    // MARK: - Private Properties
+    private let viewModel = ProfileViewModel()
+
+    // MARK: - Public Properties
+    var userId: String = ""
+
+    // MARK: - Life Cycle
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+    }
+
+    deinit {
+        print("\(Self.self) deinit")
+    }
+
+    // MARK: - Private Methods
+    private func setupUI() { ... }
+
+    // MARK: - Public Methods
+    func refresh() { ... }
+}
+```
+
+## Closure Simplicity
+
+闭包体保持简洁，复杂逻辑提取为独立函数。多参数闭包使用参数命名增强可读性：
+
+```swift
+// CORRECT — 简洁闭包
+let squared = numbers.map { $0 * $0 }
+
+// CORRECT — 复杂逻辑提取为函数
+let processed = items.map { processItem($0) }
+
+private func processItem(_ item: Item) -> Result {
+    // 复杂处理逻辑
+}
+
+// CORRECT — 多参数命名
+let sorted = numbers.sorted { (lhs, rhs) in
+    lhs < rhs
+}
+```

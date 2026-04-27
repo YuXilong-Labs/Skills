@@ -404,3 +404,175 @@ static inline XXLayoutMode XXLayoutModeFromCount(NSInteger count) {
     return mode;
 }
 ```
+
+## Enumeration Safety
+
+遍历可变数组时必须先 copy 再遍历，防止遍历过程中原数组被修改导致 crash：
+
+```objc
+// CORRECT — copy 后遍历
+NSArray *snapshot = [_mutableItems copy];
+for (XXItemModel *item in snapshot) {
+    [self processItem:item];
+}
+
+// WRONG — 直接遍历可变数组，遍历中若有增删会 crash
+for (XXItemModel *item in _mutableItems) {
+    [self processItem:item];
+}
+```
+
+其他遍历规则：
+- 不要修改循环变量，防止循环失控
+- 避免在循环中重复调用高开销方法（内存分配、网络请求、文件 I/O）
+- 优先使用 NSDictionary key-value 查找替代数组线性遍历
+
+## Collection Safety
+
+数组操作必须做防护，避免 nil 插入和越界 crash：
+
+```objc
+// addObject 前判空
+if (model) {
+    [_items addObject:model];
+}
+
+// 下标访问前检查越界
+if (index < _items.count) {
+    XXItemModel *item = _items[index];
+}
+
+// 取首尾元素用 firstObject / lastObject（空数组返回 nil，不会 crash）
+XXItemModel *first = _items.firstObject;
+XXItemModel *last = _items.lastObject;
+```
+
+## Server Data Validation
+
+服务端返回的数据使用前必须校验格式，避免因数据异常导致 crash：
+
+```objc
+if (NSStringIsValid(model.uid)) {
+    // 安全使用 uid
+}
+
+if (NSDictionaryIsValid(responseDict)) {
+    // 安全解析字典
+}
+```
+
+## NSNotification
+
+- 通知名称必须定义为 `static NSString *const` 常量
+- 在 `dealloc` 中移除通知监听
+
+```objc
+// 常量定义
+static NSString *const kUserDidLoginNotification = @"UserDidLoginNotification";
+
+// 注册
+[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleLogin:) name:kUserDidLoginNotification object:nil];
+
+// dealloc 中移除
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+```
+
+## NSTimer Weak Proxy
+
+NSTimer 会强持有 target，必须使用 WeakProxy 打破强引用，避免内存泄漏：
+
+```objc
+// CORRECT
+_timer = [NSTimer scheduledTimerWithTimeInterval:1.0
+                                          target:[XXWeakProxy proxyWithTarget:self]
+                                        selector:@selector(timerFired)
+                                        userInfo:nil
+                                         repeats:YES];
+
+// WRONG — Timer 强持有 self，ViewController 无法释放
+_timer = [NSTimer scheduledTimerWithTimeInterval:1.0
+                                          target:self
+                                        selector:@selector(timerFired)
+                                        userInfo:nil
+                                         repeats:YES];
+```
+
+## Category Method Prefix
+
+分类中的方法必须添加模块前缀 + 下划线，避免与系统方法或其他分类命名冲突：
+
+```objc
+@interface NSDate (XXTimeExtensions)
+
+/// 返回简短的时间描述
+- (NSString *)xx_timeAgoShort;
+
+@end
+```
+
+## Variable Declaration
+
+局部变量应尽量接近其使用位置，避免在方法开头集中定义：
+
+```objc
+// CORRECT — 就近定义
+- (void)processData
+{
+    NSInteger index = [self findTargetIndex];
+    [self handleAtIndex:index];
+
+    NSString *name = [self fetchName];
+    [self displayName:name];
+}
+
+// WRONG — 集中定义，阅读时需要上下跳转
+- (void)processData
+{
+    NSInteger index = [self findTargetIndex];
+    NSString *name = [self fetchName];
+
+    [self handleAtIndex:index];
+    [self displayName:name];
+}
+```
+
+## Early Return
+
+避免多重嵌套分支，使用提前返回简化代码。复杂条件提取为具名 BOOL 变量提升可读性：
+
+```objc
+// CORRECT — 提前返回
+- (void)processData:(NSData *)data
+{
+    if (!data) return;
+    if (data.length == 0) return;
+
+    // 正常处理逻辑
+}
+
+// CORRECT — 复杂条件提取为具名变量
+BOOL isUserLoggedIn = [self isUserLoggedIn];
+BOOL hasPermission = [self checkPermission];
+if (isUserLoggedIn && hasPermission) {
+    [self loadContent];
+}
+```
+
+## Single Responsibility — Files & Models
+
+- 不要在同一个 Model 文件里创建 SubModel，应分开独立文件
+- 不要在一个类文件内创建子类实现
+- 每个 `.h` / `.m` 文件只包含一个主类定义
+
+## Core Foundation Resource Management
+
+Core Foundation 对象必须手动管理生命周期，使用完毕后及时 CFRelease：
+
+```objc
+CFStringRef cfStr = CFStringCreateWithCString(NULL, "Hello", kCFStringEncodingUTF8);
+// 使用 cfStr
+CFRelease(cfStr);
+```
