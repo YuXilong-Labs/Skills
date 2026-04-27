@@ -20,6 +20,7 @@ paths:
 - Class prefix: follow project conventions — detect from existing code, CLAUDE.md, or `.clang-format`. Do NOT invent a prefix
 - Classes/Protocols: `PrefixPascalCase` (e.g. `XXUserManager`)
 - Methods/Properties: `camelCase`
+- 函数/方法名禁止以 `bt_` 开头 — 不使用任何自定义前缀修饰方法名
 - Static constants: `k` prefix + PascalCase (e.g. `kModuleName`, `kDealloc`)
 - Log module names: `static LoggerModuleName kModuleName = "ModuleName";`
 - Enums: `NS_ENUM` / `NS_OPTIONS`, values prefixed with type name (e.g. `XXUserState_Active`)

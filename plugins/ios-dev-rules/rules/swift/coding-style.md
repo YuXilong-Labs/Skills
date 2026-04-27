@@ -25,6 +25,7 @@ Follow [Apple API Design Guidelines](https://www.swift.org/documentation/api-des
 - Clarity at the point of use — omit needless words
 - Name methods and properties for their roles, not their types
 - Use `static let` for constants over global constants
+- 函数/方法名禁止以 `bt_` 开头 — 不使用任何自定义前缀修饰方法名
 
 ## Error Handling
 
