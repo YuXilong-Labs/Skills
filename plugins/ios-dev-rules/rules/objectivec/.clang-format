@@ -10,7 +10,7 @@ BraceWrapping:
   AfterObjCDeclaration: true
   BeforeElse: true
   BeforeCatch: true
-ColumnLimit: 100
+ColumnLimit: 120
 AlignAfterOpenBracket: Align
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
