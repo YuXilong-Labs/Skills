@@ -1,11 +1,15 @@
 ---
 description: 安装 iOS 开发规则包（Objective-C / Swift / Ruby）到 ~/.claude/rules/ 和 ~/.codex/rules/
-mode: info
+allowed-tools: Bash
 ---
 
 # ios-dev-rules
 
 iOS 开发三语言编码规范规则包。
+
+## 版本检测
+
+!`bash ~/.claude/scripts/ios-dev-rules/check-update.sh 2>/dev/null || echo "未安装检测脚本，请先运行 ./install.sh ios-dev-rules"`
 
 ## 安装
 

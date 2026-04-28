@@ -154,6 +154,15 @@ install_skill() {
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 agent: ${CYAN}$agents_dst/${NC}"
         fi
 
+        # 复制 scripts/ 目录（plugin 辅助脚本，仅 Claude Code 目标）
+        if [ -d "$plugin_dir/scripts" ] && [ "$target_name" = ".claude" ]; then
+            local scripts_dst="$target/scripts/$plugin_name"
+            mkdir -p "$scripts_dst"
+            cp -r "$plugin_dir/scripts/"* "$scripts_dst/"
+            chmod +x "$scripts_dst"/*.sh 2>/dev/null || true
+            echo -e "${GREEN}✓${NC} [${target_name}] 已安装 scripts: ${CYAN}$scripts_dst/${NC}"
+        fi
+
         # 复制 rules/ 子目录（编码规范规则）
         if [ -d "$plugin_dir/rules" ]; then
             local rules_dst="$target/rules"
@@ -162,6 +171,15 @@ install_skill() {
                 # Claude Code：按语言目录复制（支持 paths frontmatter）
                 cp -r "$plugin_dir/rules/"* "$rules_dst/"
                 echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$rules_dst/${NC}"
+
+                # 写入版本号（用于 check-update.sh 比对）
+                if [ -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
+                    local plugin_version
+                    plugin_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$plugin_dir/.claude-plugin/plugin.json" | head -1)
+                    if [ -n "$plugin_version" ]; then
+                        echo "$plugin_version" > "$rules_dst/${plugin_name}.version"
+                    fi
+                fi
             elif [ "$target_name" = ".codex" ]; then
                 # Codex CLI：合并为单文件（Codex 不支持分目录 rules）
                 local merged="$rules_dst/${plugin_name}.md"
