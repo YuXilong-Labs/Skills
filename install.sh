@@ -198,6 +198,13 @@ install_skill() {
                             awk 'BEGIN{skip=0} /^---$/{skip++; next} skip>=2{print}' "$rule_file" >> "$merged"
                             echo "" >> "$merged"
                         done
+                        # 复制非 .md 文件（如 .clang-format）到 Codex 对应语言目录
+                        for extra_file in "$lang_dir".*; do
+                            [ -f "$extra_file" ] || continue
+                            local codex_lang_dst="$rules_dst/$lang_name"
+                            mkdir -p "$codex_lang_dst"
+                            cp "$extra_file" "$codex_lang_dst/"
+                        done
                     fi
                 done
                 echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$merged${NC}"
@@ -237,6 +244,37 @@ install_skill() {
             echo -e "  ${CYAN}$plugin_dir/hooks/settings-snippet.json${NC}"
             [ ! -f "$claude_settings" ] && echo -e "  ${YELLOW}提示: settings.json 不存在，请先创建${NC}"
             ! command -v jq >/dev/null 2>&1 && echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
+        fi
+    fi
+
+    # Codex Hook 配置自动合并到 hooks.json
+    if [ -f "$plugin_dir/hooks/codex-settings-snippet.json" ]; then
+        local codex_hooks="$HOME/.codex/hooks.json"
+        echo
+        echo -e "${YELLOW}⚡ Hook 配置需合并到 Codex hooks.json:${NC}"
+        if command -v jq >/dev/null 2>&1; then
+            local codex_snippet="$plugin_dir/hooks/codex-settings-snippet.json"
+            local codex_hooks_to_add
+            codex_hooks_to_add=$(jq '.hooks.PostToolUse // []' "$codex_snippet" 2>/dev/null)
+            if [ -n "$codex_hooks_to_add" ] && [ "$codex_hooks_to_add" != "[]" ]; then
+                if [ ! -f "$codex_hooks" ]; then
+                    echo '{"hooks":{}}' > "$codex_hooks"
+                fi
+                local codex_status_msg
+                codex_status_msg=$(jq -r '.[0].hooks[0].statusMessage // empty' <<< "$codex_hooks_to_add" 2>/dev/null)
+                local codex_already_exists
+                codex_already_exists=$(jq --arg msg "$codex_status_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $msg)] | length' "$codex_hooks" 2>/dev/null)
+                if [ "${codex_already_exists:-0}" -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} Hook 已存在于 hooks.json，无需重复添加"
+                else
+                    jq --argjson newhooks "$codex_hooks_to_add" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + $newhooks' "$codex_hooks" > "${codex_hooks}.tmp" \
+                        && mv "${codex_hooks}.tmp" "$codex_hooks" \
+                        && echo -e "  ${GREEN}✓${NC} 已自动合并 Hook 配置到 ${CYAN}$codex_hooks${NC}" \
+                        || echo -e "  ${RED}✗${NC} 自动合并失败，请手动合并 ${CYAN}$codex_snippet${NC}"
+                fi
+            fi
+        else
+            echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
         fi
     fi
 }
