@@ -61,7 +61,7 @@ Memory management rules:
 
 Method/function definitions: opening brace **must** be on the **next line** (Allman style). This is mandatory — never place the opening brace on the same line as the method signature:
 
-Control statements (`if`/`else`/`for`/`while`/`switch`): opening brace on **same line** (K&R style):
+Control statements (`if`/`else`/`for`/`while`/`switch`): opening brace on **same line** (K&R style). `} else {` 和 `} catch {` 保持同一行，不换行：
 
 ```objc
 // CORRECT — method brace on next line

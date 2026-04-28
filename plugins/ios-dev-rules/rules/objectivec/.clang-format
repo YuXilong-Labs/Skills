@@ -1,19 +1,60 @@
 BasedOnStyle: LLVM
 Language: ObjC
+
+# 缩进
 IndentWidth: 4
 ObjCBlockIndentWidth: 4
+IndentCaseLabels: true
+
+# ObjC 特有
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
+ObjCBreakBeforeNestedBlockParam: false
+
+# import 不自动重排
+SortIncludes: false
+
+# 指针对齐
+PointerAlignment: Right
+
+# 列宽
+ColumnLimit: 120
+
+# 对齐
+AlignAfterOpenBracket: Align
+AlignOperands: DontAlign
+AlignTrailingComments:
+  Kind: Leave
+  OverEmptyLines: 1
+
+# 空行控制
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: true
+KeepEmptyLinesAtEOF: true
+
+# 大括号换行
 BreakBeforeBraces: Custom
 BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: false
+  AfterEnum: false
   AfterFunction: true
+  AfterNamespace: false
   AfterObjCDeclaration: true
-  BeforeElse: true
-  BeforeCatch: true
-ColumnLimit: 120
-AlignAfterOpenBracket: Align
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: false
+  BeforeCatch: false
+  SplitEmptyFunction: false
+
+# 单行控制
+AllowShortBlocksOnASingleLine: Empty
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
-PointerAlignment: Right
+
+# 空格
 SpaceBeforeParens: ControlStatements
+
+# 注释不重排
+ReflowComments: false
