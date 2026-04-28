@@ -17,6 +17,12 @@
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
 
+## Rules（编码规范）
+
+| Rules | 描述 | 覆盖语言 | 自动格式化 |
+|-------|------|----------|-----------|
+| `ios-dev-rules` | iOS 三语言编码规范 — 命名、属性、内存管理、约束、注释、遍历安全、集合防护等 | ObjC / Swift / Ruby | ObjC: clang-format hook（自动安装） |
+
 ## Hooks
 
 | Hook | 类型 | 触发时机 | 描述 |
@@ -37,6 +43,7 @@
 | `/wk-lark-wiki-batch` | 批量 main 分支基础组件文档生成 + Haiku 润色 + 飞书上传 | `wk-lark-wiki-batch` |
 | `/wk-crash-repro-fix` | iOS Crash 端到端闭环排查（根因→复现→修复→回归） | `wk-crash-repro-fix` |
 | `/wk-gh-pr-review-fix` | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | `wk-gh-pr-review-fix` |
+| `/ios-dev-rules` | 安装 iOS 开发规则包（ObjC/Swift/Ruby）+ 检测远端版本更新 | `ios-dev-rules` |
 
 ## 安装
 
@@ -67,6 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install wk-lark-wiki@yuxilong-skills
 /plugin install wk-crash-repro-fix@yuxilong-skills
 /plugin install wk-gh-pr-review-fix@yuxilong-skills
+/plugin install ios-dev-rules@yuxilong-skills
 ```
 
 ### 方式 3：手动安装
@@ -90,6 +98,7 @@ cd Skills
 ./install.sh wk-lark-wiki
 ./install.sh wk-crash-repro-fix
 ./install.sh wk-gh-pr-review-fix
+./install.sh ios-dev-rules
 
 ## 使用
 
@@ -246,7 +255,8 @@ Skills/
 │   ├── wk-crash-repro-fix/       # iOS Crash 闭环排查
 │   ├── wk-gh-pr-review-fix/      # GitHub PR review 闭环处理
 │   ├── ios-blocked-words-check/  # 禁止关键词检查 Skill
-│   └── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
+│   ├── ios-blocked-words-hook/   # 禁止关键词 PostToolUse Hook
+│   └── ios-dev-rules/            # iOS 三语言编码规范（ObjC/Swift/Ruby）
 ├── install.sh                    # 双目标安装 + curl 远程安装
 └── README.md
 ```

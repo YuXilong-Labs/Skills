@@ -38,6 +38,7 @@ description: |
 | `wiki_node` | 是 | — | 飞书目标 wiki 节点 token（`wikcnXXXX`） |
 | `preview` | 否 | `false` | 预览模式：不执行 lark-cli，不写入任何 `.wk-lark-wiki/` 文件 |
 | `no_polish` | 否 | `false` | 跳过 Step 5（默认启用 Haiku 深度润色） |
+| `provider` | 否 | `claude` | 润色 LLM 提供者：`claude`（默认）或 `codex` |
 | `force` | 否 | `false` | 无视所有缓存 hash，强制重生成 + 重润色 + 重上传 |
 | `component` | 否 | — | 仅处理指定组件，调试用 |
 
@@ -156,14 +157,20 @@ PYTHONPATH=. python3 tools/generate_api_docs.py \
 ```bash
 INPUT="<pods_dir>/<component>/.wk-lark-wiki/raw.md"
 OUTPUT="<pods_dir>/<component>/.wk-lark-wiki/polished.md"
-claude -p --model haiku \
-  "你是 iOS API 文档润色器。严格遵循 polish-guidelines 的结构模板、描述规则与飞书 Markdown 最佳实践。输入是一整份 Markdown 文档，直接输出润色后的完整 Markdown，不要解释、不要多余文本。" \
-  < "$INPUT" > "$OUTPUT"
+PROMPT="你是 iOS API 文档润色器。严格遵循 polish-guidelines 的结构模板、描述规则与飞书 Markdown 最佳实践。输入是一整份 Markdown 文档，直接输出润色后的完整 Markdown，不要解释、不要多余文本。"
+
+# provider=claude（默认）
+claude -p --model haiku "$PROMPT" < "$INPUT" > "$OUTPUT"
+
+# provider=codex
+codex exec --skip-git-repo-check -m gpt-5-codex "$PROMPT" < "$INPUT" > "$OUTPUT"
 ```
 
-- `--model haiku` 不识别时改用 `--model claude-haiku-4-5`
+- **Provider 选择**：根据 `provider` 参数选择对应命令行
+  - `claude`（默认）：`claude -p --model haiku`，不识别时降级 `--model claude-haiku-4-5`
+  - `codex`：`codex exec --skip-git-repo-check -m gpt-5-codex`，模型不可用时降级不带 `-m`
 - 润色失败（非零退出 / 输出为空 / 小于原文 30%）→ 记 warning，**不**覆盖旧 `polished.md`，本轮改用 `raw.md` 作为上传源
-- 润色成功 → 覆盖写 `polished.md`，并写 `raw-checksum.json = {"raw_sha": raw_sha, "polished_at": "<ISO>"}`
+- 润色成功 → 覆盖写 `polished.md`，并写 `raw-checksum.json = {"raw_sha": raw_sha, "polished_at": "<ISO>", "provider": "<provider>"}`
 - `preview=true` 只打印计划，不写文件
 
 > 润色规则详见 [../wk-lark-wiki/references/polish-guidelines.md](../wk-lark-wiki/references/polish-guidelines.md)
@@ -201,7 +208,7 @@ git status .wk-lark-wiki/ | head -10
 ===== wk-lark-wiki-batch 汇总 =====
 成功 N  未变跳过 U  非main跳过 M  失败 K
   (生成: 全量 G / 增量 I / 跳过 S)
-  (润色: 新润 P / 命中缓存 C / 回退原文 F / 关闭 -)
+  (润色: 新润 P / 命中缓存 C / 回退原文 F / 关闭 -) [provider=<claude|codex>]
   (上传: 新建 Cr / 覆盖更新 Up / 跳过未变更 Sk)
 
 [成功]
