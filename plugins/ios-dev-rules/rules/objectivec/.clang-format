@@ -3,6 +3,7 @@ Language: ObjC
 
 # 缩进
 IndentWidth: 4
+TabWidth: 4
 ObjCBlockIndentWidth: 4
 IndentCaseLabels: true
 
@@ -52,9 +53,14 @@ AllowShortBlocksOnASingleLine: Empty
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
 
 # 空格
 SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: true
+
+# 文件末尾
+InsertNewlineAtEOF: true
 
 # 注释不重排
 ReflowComments: false
