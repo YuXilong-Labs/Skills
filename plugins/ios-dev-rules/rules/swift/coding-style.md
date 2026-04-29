@@ -26,6 +26,7 @@ Follow [Apple API Design Guidelines](https://www.swift.org/documentation/api-des
 - Name methods and properties for their roles, not their types
 - Use `static let` for constants over global constants
 - 函数/方法名禁止以 `bt_` 开头 — 不使用任何自定义前缀修饰方法名
+- **禁止类型名/文件名与当前模块（SPM target / framework / podspec）同名** — 例如模块名为 `BTUserCardPanelNew`，则不允许存在 `class BTUserCardPanelNew` / `struct BTUserCardPanelNew` 或 `BTUserCardPanelNew.swift` 文件。同名会导致 `import BTUserCardPanelNew` 与类型符号混淆，编译器类型解析或 `Module.TypeName` 访问出错。类型名需加功能后缀（如 `BTUserCardPanelNewView`、`BTUserCardPanelNewController`）
 
 ## Error Handling
 

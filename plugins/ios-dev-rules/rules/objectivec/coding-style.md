@@ -21,6 +21,7 @@ paths:
 - Classes/Protocols: `PrefixPascalCase` (e.g. `XXUserManager`)
 - Methods/Properties: `camelCase`
 - 函数/方法名禁止以 `bt_` 开头 — 不使用任何自定义前缀修饰方法名
+- **禁止类名/文件名与当前模块（podspec / framework）同名** — 例如模块名为 `BTUserCardPanelNew`，则不允许存在 `BTUserCardPanelNew` 类或 `BTUserCardPanelNew.h/.m/.mm` 文件。同名会导致 `@import BTUserCardPanelNew` 与类符号混淆、编译期类型解析出错。类名需加功能后缀（如 `BTUserCardPanelNewView`、`BTUserCardPanelNewController`）
 - Static constants: `k` prefix + PascalCase (e.g. `kModuleName`, `kDealloc`)
 - Log module names: `static LoggerModuleName kModuleName = "ModuleName";`
 - Enums: `NS_ENUM` / `NS_OPTIONS`, values prefixed with type name (e.g. `XXUserState_Active`)
