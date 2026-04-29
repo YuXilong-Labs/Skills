@@ -156,6 +156,7 @@
 - [ ] 集合操作是否优先 `map` / `filter` / `compactMap`（避免手动 for 循环拼装）
 - [ ] 方法名是否动词开头、布尔属性是否 `is`/`has` 前缀
 - [ ] 是否使用现代 API（`Result` / `async-await`，避免嵌套回调金字塔）
+- [ ] **【严格】非必要禁止使用运行时调用 ObjC 函数** — 禁止用 `NSSelectorFromString` + `perform(_:)`、`NSClassFromString` + `responds(to:)`、`objc_getClass` / `objc_msgSend`、`Selector(...)` 字符串拼接调用未声明方法的方式访问 ObjC API。如需调用 ObjC 类/方法，必须导入对应的 ObjC 模块（`import ModuleName`）或通过 bridging-header 暴露后用静态类型调用。仅在与第三方运行时交互、KVO/KVC、热修复等无法静态绑定的场景才允许，并须在代码注释中说明原因
 
 ### Objective-C
 - [ ] 属性声明语义是否准确（`nonatomic` / `copy` / `strong` / `weak`）
