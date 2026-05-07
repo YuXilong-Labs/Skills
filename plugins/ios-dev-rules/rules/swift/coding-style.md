@@ -81,6 +81,8 @@ func fetch(from source: any DataSource) async throws -> some View {
 
 ## Comments
 
+写的代码要有详细的注释，注释要求**简洁明了但不臃肿**：重点说清楚 “为什么 / 边界 / 约束 / 坑”，避免重复显而易见的 “是什么”。一句话能讲清楚的不要写两句，命名已经能表达的就不要再加注释。
+
 Every class, property, public method, and non-trivial logic block must have a `///` doc comment. Use `//` for inline logic notes:
 
 ```swift
