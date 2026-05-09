@@ -82,6 +82,21 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 
 - 本仓库提交和推送时**可跳过本地 git pre-commit hook**（使用 `--no-verify`）
 
+## Rules 修改约定
+
+修改 `plugins/ios-dev-rules/rules/**` 下任何文件时，**必须**在同一 commit 中同步 bump 版本号：
+
+1. 运行 `./scripts/bump-rules-version.sh <new-version>` 一次性更新两处：
+   - `plugins/ios-dev-rules/.claude-plugin/plugin.json`（单一真相源）
+   - `.claude-plugin/marketplace.json`（ios-dev-rules 条目）
+2. 提交前运行 `./scripts/bump-rules-version.sh --check` 自检，确保两处一致
+3. **不允许**只改一处，两处必须同步
+
+版本号语义：
+- `patch`（x.x.N）：修改规则文案、措辞、示例
+- `minor`（x.N.0）：新增或删除规则文件
+- `major`（N.0.0）：破坏性改动（如重命名语言目录、删除整个语言规则集）
+
 ## 设计原则
 
 - 证据驱动 — 所有结论必须附带搜索证据链

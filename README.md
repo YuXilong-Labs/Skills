@@ -239,6 +239,30 @@ cd Skills
 ./install.sh --uninstall wk-scan-clean-code
 ```
 
+### ios-dev-rules 自动升级
+
+安装后，规则会在每次编辑文件时**后台自动检查更新**（每日最多一次，不阻塞编辑）：
+
+- 检测到新版本时，自动在后台执行 `install.sh ios-dev-rules` 覆盖安装
+- 升级日志：`~/.claude/rules/.ios-dev-rules.upgrade.log`
+- 节流标记：`~/.claude/rules/.ios-dev-rules.last-check`（24h 内不重复检查）
+
+### ios-dev-rules 手动升级
+
+```bash
+# 方式 1：slash command（推荐，在 Claude Code 中使用）
+/ios-dev-rules update
+
+# 方式 2：直接运行安装脚本
+curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.sh | bash -s -- ios-dev-rules
+```
+
+查看当前版本状态（不升级）：
+
+```bash
+/ios-dev-rules
+```
+
 ## 目录结构
 
 ```

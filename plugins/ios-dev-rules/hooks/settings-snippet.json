@@ -11,6 +11,17 @@
             "statusMessage": "ObjC clang-format 格式化中..."
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nohup bash \"$HOME/.claude/scripts/ios-dev-rules/check-and-upgrade.sh\" --mode=auto --target=claude >/dev/null 2>&1 &",
+            "timeout": 3,
+            "statusMessage": "ios-dev-rules 后台检查更新"
+          }
+        ]
       }
     ]
   }

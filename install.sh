@@ -154,8 +154,8 @@ install_skill() {
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 agent: ${CYAN}$agents_dst/${NC}"
         fi
 
-        # 复制 scripts/ 目录（plugin 辅助脚本，仅 Claude Code 目标）
-        if [ -d "$plugin_dir/scripts" ] && [ "$target_name" = ".claude" ]; then
+        # 复制 scripts/ 目录（plugin 辅助脚本，双目标）
+        if [ -d "$plugin_dir/scripts" ]; then
             local scripts_dst="$target/scripts/$plugin_name"
             mkdir -p "$scripts_dst"
             cp -r "$plugin_dir/scripts/"* "$scripts_dst/"
@@ -169,10 +169,18 @@ install_skill() {
             mkdir -p "$rules_dst"
             if [ "$target_name" = ".claude" ]; then
                 # Claude Code：按语言目录复制（支持 paths frontmatter）
+                # 先清理各语言子目录，防止旧规则文件残留
+                for lang_dir in "$plugin_dir/rules"/*/; do
+                    [ -d "$lang_dir" ] || continue
+                    local lang_name
+                    lang_name=$(basename "$lang_dir")
+                    rm -rf "${rules_dst:?}/$lang_name"
+                    mkdir -p "$rules_dst/$lang_name"
+                done
                 cp -r "$plugin_dir/rules/"* "$rules_dst/"
                 echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$rules_dst/${NC}"
 
-                # 写入版本号（用于 check-update.sh 比对）
+                # 写入版本号（用于 check-and-upgrade.sh 比对）
                 if [ -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
                     local plugin_version
                     plugin_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$plugin_dir/.claude-plugin/plugin.json" | head -1)
@@ -208,6 +216,15 @@ install_skill() {
                     fi
                 done
                 echo -e "${GREEN}✓${NC} [${target_name}] 已安装 rules: ${CYAN}$merged${NC}"
+
+                # 写入版本号（与 Claude 对称，用于 check-and-upgrade.sh 比对）
+                if [ -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
+                    local plugin_version
+                    plugin_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$plugin_dir/.claude-plugin/plugin.json" | head -1)
+                    if [ -n "$plugin_version" ]; then
+                        echo "$plugin_version" > "$rules_dst/${plugin_name}.version"
+                    fi
+                fi
             fi
         fi
     done
@@ -218,25 +235,39 @@ install_skill() {
         echo
         echo -e "${YELLOW}⚡ Hook 配置需合并到 Claude Code settings:${NC}"
         if command -v jq >/dev/null 2>&1 && [ -f "$claude_settings" ]; then
-            # 自动合并 hook 配置
+            # 自动合并 hook 配置：逐条 hook 去重（按 statusMessage 或 command 前64字符）
             local snippet="$plugin_dir/hooks/settings-snippet.json"
             local hooks_to_add
             hooks_to_add=$(jq '.hooks.PostToolUse // []' "$snippet" 2>/dev/null)
             if [ -n "$hooks_to_add" ] && [ "$hooks_to_add" != "[]" ]; then
-                local existing_hooks
-                existing_hooks=$(jq '.hooks.PostToolUse // []' "$claude_settings" 2>/dev/null)
-                # 检查是否已包含该 hook（通过 statusMessage 判断）
-                local status_msg
-                status_msg=$(jq -r '.[0].hooks[0].statusMessage // empty' <<< "$hooks_to_add" 2>/dev/null)
-                local already_exists
-                already_exists=$(jq --arg msg "$status_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $msg)] | length' "$claude_settings" 2>/dev/null)
-                if [ "${already_exists:-0}" -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} Hook 已存在于 settings.json，无需重复添加"
-                else
-                    jq --argjson newhooks "$hooks_to_add" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + $newhooks' "$claude_settings" > "${claude_settings}.tmp" \
-                        && mv "${claude_settings}.tmp" "$claude_settings" \
-                        && echo -e "  ${GREEN}✓${NC} 已自动合并 Hook 配置到 ${CYAN}$claude_settings${NC}" \
-                        || echo -e "  ${RED}✗${NC} 自动合并失败，请手动合并 ${CYAN}$snippet${NC}"
+                local added=0
+                local skipped=0
+                # 遍历 snippet 中每个 PostToolUse 条目，逐条去重后 append
+                local count
+                count=$(jq 'length' <<< "$hooks_to_add" 2>/dev/null || echo 0)
+                for i in $(seq 0 $((count - 1))); do
+                    local entry
+                    entry=$(jq ".[$i]" <<< "$hooks_to_add" 2>/dev/null)
+                    # 取该条目第一个 hook 的 statusMessage 作为去重 key
+                    local msg
+                    msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$entry" 2>/dev/null)
+                    local exists=0
+                    if [ -n "$msg" ]; then
+                        exists=$(jq --arg m "$msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $m)] | length' "$claude_settings" 2>/dev/null || echo 0)
+                    fi
+                    if [ "${exists:-0}" -gt 0 ]; then
+                        skipped=$((skipped + 1))
+                    else
+                        jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' "$claude_settings" > "${claude_settings}.tmp" \
+                            && mv "${claude_settings}.tmp" "$claude_settings"
+                        added=$((added + 1))
+                    fi
+                done
+                if [ $added -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} 已自动合并 $added 条 Hook 配置到 ${CYAN}$claude_settings${NC}"
+                fi
+                if [ $skipped -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} $skipped 条 Hook 已存在于 settings.json，无需重复添加"
                 fi
             fi
         else
@@ -260,17 +291,32 @@ install_skill() {
                 if [ ! -f "$codex_hooks" ]; then
                     echo '{"hooks":{}}' > "$codex_hooks"
                 fi
-                local codex_status_msg
-                codex_status_msg=$(jq -r '.[0].hooks[0].statusMessage // empty' <<< "$codex_hooks_to_add" 2>/dev/null)
-                local codex_already_exists
-                codex_already_exists=$(jq --arg msg "$codex_status_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $msg)] | length' "$codex_hooks" 2>/dev/null)
-                if [ "${codex_already_exists:-0}" -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} Hook 已存在于 hooks.json，无需重复添加"
-                else
-                    jq --argjson newhooks "$codex_hooks_to_add" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + $newhooks' "$codex_hooks" > "${codex_hooks}.tmp" \
-                        && mv "${codex_hooks}.tmp" "$codex_hooks" \
-                        && echo -e "  ${GREEN}✓${NC} 已自动合并 Hook 配置到 ${CYAN}$codex_hooks${NC}" \
-                        || echo -e "  ${RED}✗${NC} 自动合并失败，请手动合并 ${CYAN}$codex_snippet${NC}"
+                local codex_added=0
+                local codex_skipped=0
+                local codex_count
+                codex_count=$(jq 'length' <<< "$codex_hooks_to_add" 2>/dev/null || echo 0)
+                for i in $(seq 0 $((codex_count - 1))); do
+                    local codex_entry
+                    codex_entry=$(jq ".[$i]" <<< "$codex_hooks_to_add" 2>/dev/null)
+                    local codex_msg
+                    codex_msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$codex_entry" 2>/dev/null)
+                    local codex_exists=0
+                    if [ -n "$codex_msg" ]; then
+                        codex_exists=$(jq --arg m "$codex_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $m)] | length' "$codex_hooks" 2>/dev/null || echo 0)
+                    fi
+                    if [ "${codex_exists:-0}" -gt 0 ]; then
+                        codex_skipped=$((codex_skipped + 1))
+                    else
+                        jq --argjson e "$codex_entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' "$codex_hooks" > "${codex_hooks}.tmp" \
+                            && mv "${codex_hooks}.tmp" "$codex_hooks"
+                        codex_added=$((codex_added + 1))
+                    fi
+                done
+                if [ $codex_added -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} 已自动合并 $codex_added 条 Hook 配置到 ${CYAN}$codex_hooks${NC}"
+                fi
+                if [ $codex_skipped -gt 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} $codex_skipped 条 Hook 已存在于 hooks.json，无需重复添加"
                 fi
             fi
         else
