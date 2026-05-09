@@ -25,8 +25,8 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 
 | 语言 | 文件匹配 | 覆盖内容 |
 |------|----------|----------|
-| Objective-C | `*.h`, `*.m`, `*.mm` | 命名、属性、内存管理、pragma mark、nullability |
-| Swift | `*.swift`, `Package.swift` | Swift 6.2 并发、iOS 26、SwiftUI、协议导向 |
+| Objective-C | `*.h`, `*.m`, `*.mm` | 命名、属性、内存管理、pragma mark、nullability、复杂度与可读性约束 |
+| Swift | `*.swift`, `Package.swift` | Swift 6.2 并发、iOS 26、SwiftUI、协议导向、复杂度与可读性约束 |
 | Ruby | `Gemfile`, `Podfile`, `Fastfile`, `*.podspec`, `*.rb` | CocoaPods、Fastlane、Bundler、RuboCop |
 
 ## 卸载
