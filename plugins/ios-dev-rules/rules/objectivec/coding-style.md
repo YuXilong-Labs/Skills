@@ -26,6 +26,66 @@ paths:
 - Log module names: `static LoggerModuleName kModuleName = "ModuleName";`
 - Enums: `NS_ENUM` / `NS_OPTIONS`, values prefixed with type name (e.g. `XXUserState_Active`)
 
+## Event Handler Naming
+
+事件回调方法使用统一的 `handle` 前缀，按来源分为按钮点击与手势识别两类。命名中显式带上事件来源类型，参数类型必须匹配该类型，不使用通用 `id` 占位（手势除外，按钮仍用 `id sender`）。
+
+### 按钮点击事件
+
+`- (void)handle<业务名>ButtonEvent:(id)sender` —— 前缀 `handle` + 业务名 + 后缀 `ButtonEvent`，参数统一为 `(id)sender`：
+
+```objc
+// CORRECT
+- (void)handleCloseButtonEvent:(id)sender
+{
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)handleSubmitButtonEvent:(id)sender
+{
+    [self submitForm];
+}
+
+// WRONG — 缺少 ButtonEvent 后缀，无法一眼识别事件来源
+- (void)closeAction:(id)sender { }
+- (void)onSubmit:(id)sender { }
+- (void)submitClick:(UIButton *)btn { }
+```
+
+### 手势识别事件
+
+`- (void)handle<GestureType>GestureRecognizer:(<GestureType> *)gestureRecognizer` —— 前缀 `handle` + 具体手势类型 + 后缀 `GestureRecognizer`，参数类型必须为对应的具体手势类（便于直接读取 `state` / `locationInView:` / `velocityInView:` 等属性）：
+
+```objc
+// CORRECT — 参数类型与方法名中的手势类型保持一致
+- (void)handleTapGestureRecognizer:(UITapGestureRecognizer *)gestureRecognizer
+{
+    CGPoint point = [gestureRecognizer locationInView:self];
+    // ...
+}
+
+- (void)handleLongPressGestureRecognizer:(UILongPressGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+        // ...
+    }
+}
+
+- (void)handlePanGestureRecognizer:(UIPanGestureRecognizer *)gestureRecognizer
+{
+    CGPoint translation = [gestureRecognizer translationInView:self];
+    // ...
+}
+
+// WRONG — 参数类型用基类 UIGestureRecognizer，读属性还得强转
+- (void)handlePan:(UIGestureRecognizer *)gesture { }
+
+// WRONG — 命名未标明手势类型
+- (void)onGesture:(UITapGestureRecognizer *)g { }
+```
+
+**为什么**：同一视图常绑多种手势，方法名带上具体类型可避免一个 handler 绑两种手势后需要 `isKindOfClass:` 判断；参数直接用具体类型则省去强转。
+
 ## Property Declaration
 
 No space between `@property` and `(`. Modifier order: `nonatomic`, memory, nullability, readwrite/readonly.

@@ -28,6 +28,60 @@ Follow [Apple API Design Guidelines](https://www.swift.org/documentation/api-des
 - 函数/方法名禁止以 `bt_` 开头 — 不使用任何自定义前缀修饰方法名
 - **禁止类型名/文件名与当前模块（SPM target / framework / podspec）同名** — 例如模块名为 `BTUserCardPanelNew`，则不允许存在 `class BTUserCardPanelNew` / `struct BTUserCardPanelNew` 或 `BTUserCardPanelNew.swift` 文件。同名会导致 `import BTUserCardPanelNew` 与类型符号混淆，编译器类型解析或 `Module.TypeName` 访问出错。类型名需加功能后缀（如 `BTUserCardPanelNewView`、`BTUserCardPanelNewController`）
 
+## Event Handler Naming
+
+事件回调方法使用统一的 `handle` 前缀，按来源分为按钮点击与手势识别两类。命名中显式带上事件来源类型，参数类型必须匹配该类型。Target-Action 方法需要 `@objc` 标注。
+
+### 按钮点击事件
+
+`@objc func handle<业务名>ButtonEvent(_ sender: Any)` —— 前缀 `handle` + 业务名 + 后缀 `ButtonEvent`。参数类型默认用 `Any`（对齐 OC 的 `id sender`），需要直接读取控件属性时可收窄为 `UIButton`：
+
+```swift
+// CORRECT
+@objc private func handleCloseButtonEvent(_ sender: Any) {
+    dismiss(animated: true)
+}
+
+@objc private func handleSubmitButtonEvent(_ sender: UIButton) {
+    sender.isEnabled = false
+    submitForm()
+}
+
+// WRONG — 缺少 ButtonEvent 后缀
+@objc private func closeTapped(_ sender: Any) { }
+@objc private func onSubmit() { }
+```
+
+### 手势识别事件
+
+`@objc func handle<GestureType>GestureRecognizer(_ gestureRecognizer: <GestureType>)` —— 前缀 `handle` + 具体手势类型 + 后缀 `GestureRecognizer`，参数类型必须为对应的具体手势类：
+
+```swift
+// CORRECT — 参数类型与方法名中的手势类型一致
+@objc private func handleTapGestureRecognizer(_ gestureRecognizer: UITapGestureRecognizer) {
+    let point = gestureRecognizer.location(in: self)
+    // ...
+}
+
+@objc private func handleLongPressGestureRecognizer(_ gestureRecognizer: UILongPressGestureRecognizer) {
+    guard gestureRecognizer.state == .began else { return }
+    // ...
+}
+
+@objc private func handlePanGestureRecognizer(_ gestureRecognizer: UIPanGestureRecognizer) {
+    let translation = gestureRecognizer.translation(in: self)
+    // ...
+}
+
+// WRONG — 参数用基类，读属性还得 as? 强转
+@objc private func handlePan(_ gesture: UIGestureRecognizer) { }
+
+// WRONG — 命名未标明手势类型
+@objc private func onGesture(_ g: UITapGestureRecognizer) { }
+```
+
+**为什么**：同一视图常绑多种手势，方法名带上具体类型可避免一个 handler 绑两种手势后需要 `is`/`as?` 判断；参数直接用具体类型则省去强转。
+
 ## Error Handling
 
 Use typed throws (Swift 6+) and pattern matching:
