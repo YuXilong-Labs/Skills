@@ -17,7 +17,7 @@ cat docs/api/.wiki-mapping.json 2>/dev/null || echo "{}"
 
 2. 如果有 doc_id（曾经上传过）：
    → 读取文件内容到临时文件
-   → 执行：lark-cli docs +update --doc <doc_id> --mode overwrite --markdown-file <tmp_file> --as user
+   → 执行：lark-cli docs +update --api-version v2 --doc <doc_id> --mode overwrite --markdown-file <tmp_file> --as user
    → 如果 update 成功 → 记录结果，继续下一个
    → 如果 update 失败（文档已被删除等）→ 清除映射，进入步骤 3
 
@@ -26,9 +26,9 @@ cat docs/api/.wiki-mapping.json 2>/dev/null || echo "{}"
    → 解析搜索结果，查找 title 完全匹配的文档
    → 如果找到匹配文档：
      → 提取 doc_id
-     → 执行：lark-cli docs +update --doc <doc_id> --mode overwrite --markdown-file <tmp_file> --as user
+     → 执行：lark-cli docs +update --api-version v2 --doc <doc_id> --mode overwrite --markdown-file <tmp_file> --as user
    → 如果未找到匹配：
-     → 执行：lark-cli docs +create --title "<title>" --markdown-file <tmp_file> --wiki-node <wiki_node> --as user
+     → 执行：lark-cli docs +create --api-version v2 --title "<title>" --markdown-file <tmp_file> --wiki-node <wiki_node> --as user
      → 从创建结果中提取 doc_id
 
 4. 更新 .wiki-mapping.json 中该组件的 doc_id 和 last_uploaded

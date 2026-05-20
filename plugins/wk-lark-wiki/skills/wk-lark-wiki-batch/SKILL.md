@@ -183,8 +183,8 @@ codex exec --skip-git-repo-check -m gpt-5-codex "$PROMPT" < "$INPUT" > "$OUTPUT"
 
 1. `unchanged=True`（Step 3 结论）且 `force=false` → 默认 `upload_status=skipped_unchanged`，不调用 lark-cli；仅当用户显式 `force=true` 时走 update 同步。
 2. 读取 `<component>/.wk-lark-wiki/wiki-mapping.json.doc_id`。
-3. 有 `doc_id`：`lark-cli docs +update --doc <doc_id> --mode overwrite --markdown-file <file> --as user`；失败则清 doc_id 走步骤 4。
-4. 无映射：`lark-cli docs +search --query "<component>" --as user`；标题完全匹配则 update，否则 `lark-cli docs +create --title "<component>" --markdown-file <file> --wiki-node <wiki_node> --as user`。
+3. 有 `doc_id`：`lark-cli docs +update --api-version v2 --doc <doc_id> --mode overwrite --markdown-file <file> --as user`；失败则清 doc_id 走步骤 4。
+4. 无映射：`lark-cli docs +search --query "<component>" --as user`；标题完全匹配则 `lark-cli docs +update --api-version v2 --doc <doc_id> --mode overwrite --markdown-file <file> --as user`，否则 `lark-cli docs +create --api-version v2 --title "<component>" --markdown-file <file> --wiki-node <wiki_node> --as user`。
 5. 写回 `<component>/.wk-lark-wiki/wiki-mapping.json`：`{wiki_node, doc_id, doc_url, title, last_uploaded}`。
 6. `preview=true` 只打印计划。
 
