@@ -125,6 +125,11 @@ install_skill() {
         return 1
     fi
 
+    local has_jq=0
+    if command -v jq >/dev/null 2>&1; then
+        has_jq=1
+    fi
+
     for target in "${TARGETS[@]}"; do
         local target_name
         target_name=$(basename "$target")
@@ -134,8 +139,89 @@ install_skill() {
         mkdir -p "$skills_dst"
         mkdir -p "$commands_dst"
 
-        # 复制 skills/ 子目录
+        # ===== Manifest：清理上次安装中已被仓库删除的产物 =====
+        # 仅在 jq 可用时启用，缺 jq 时退化为现有覆盖式逻辑（不清理残留）。
+        local manifest_dir="$target/.skills-manifest"
+        local manifest_file="$manifest_dir/${plugin_name}.json"
+        local old_skills_list=""
+        local old_commands_list=""
+        local old_agents_list=""
+        local old_has_scripts=0
+        if [ "$has_jq" -eq 1 ] && [ -f "$manifest_file" ]; then
+            old_skills_list=$(jq -r '(.skills // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            old_commands_list=$(jq -r '(.commands // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            old_agents_list=$(jq -r '(.agents // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            old_has_scripts=$(jq -r '.has_scripts // false' "$manifest_file" 2>/dev/null || echo "false")
+            [ "$old_has_scripts" = "true" ] && old_has_scripts=1 || old_has_scripts=0
+        fi
+
+        # 计算当前仓库内的清单
+        local new_skills_list=""
         if [ -d "$plugin_dir/skills" ]; then
+            new_skills_list=$(find "$plugin_dir/skills" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null | sort)
+        fi
+        local new_commands_list=""
+        if [ -d "$plugin_dir/commands" ]; then
+            new_commands_list=$(find "$plugin_dir/commands" -mindepth 1 -maxdepth 1 -type f -exec basename {} \; 2>/dev/null | sort)
+        fi
+        local new_agents_list=""
+        if [ -d "$plugin_dir/agents" ]; then
+            new_agents_list=$(find "$plugin_dir/agents" -mindepth 1 -maxdepth 1 -type f -exec basename {} \; 2>/dev/null | sort)
+        fi
+        local new_has_scripts=0
+        [ -d "$plugin_dir/scripts" ] && new_has_scripts=1
+
+        # 差集 = 旧 - 新 → 逐条删除（comm -23 要求 sort 输入）
+        if [ "$has_jq" -eq 1 ] && [ -n "$old_skills_list" ]; then
+            local stale_skills
+            stale_skills=$(comm -23 <(echo "$old_skills_list" | sort) <(echo "$new_skills_list") || true)
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$skills_dst/$name"
+                if [ -d "$p" ]; then
+                    rm -rf "$p"
+                    echo -e "${YELLOW}-${NC} [${target_name}] 清理失效 skill: ${CYAN}$p${NC}"
+                fi
+            done <<< "$stale_skills"
+        fi
+        if [ "$has_jq" -eq 1 ] && [ -n "$old_commands_list" ]; then
+            local stale_commands
+            stale_commands=$(comm -23 <(echo "$old_commands_list" | sort) <(echo "$new_commands_list") || true)
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$commands_dst/$name"
+                if [ -f "$p" ]; then
+                    rm -f "$p"
+                    echo -e "${YELLOW}-${NC} [${target_name}] 清理失效 command: ${CYAN}$p${NC}"
+                fi
+            done <<< "$stale_commands"
+        fi
+        if [ "$has_jq" -eq 1 ] && [ -n "$old_agents_list" ]; then
+            local stale_agents
+            stale_agents=$(comm -23 <(echo "$old_agents_list" | sort) <(echo "$new_agents_list") || true)
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$target/agents/$name"
+                if [ -f "$p" ]; then
+                    rm -f "$p"
+                    echo -e "${YELLOW}-${NC} [${target_name}] 清理失效 agent: ${CYAN}$p${NC}"
+                fi
+            done <<< "$stale_agents"
+        fi
+        if [ "$has_jq" -eq 1 ] && [ "$old_has_scripts" -eq 1 ] && [ "$new_has_scripts" -eq 0 ]; then
+            local p="$target/scripts/$plugin_name"
+            if [ -d "$p" ]; then
+                rm -rf "$p"
+                echo -e "${YELLOW}-${NC} [${target_name}] 清理失效 scripts: ${CYAN}$p${NC}"
+            fi
+        fi
+
+        # 复制 skills/ 子目录（先清空对应目标子目录，确保仓库内删除的引用文件不残留）
+        if [ -d "$plugin_dir/skills" ]; then
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                rm -rf "${skills_dst:?}/$name"
+            done <<< "$new_skills_list"
             cp -r "$plugin_dir/skills/"* "$skills_dst/"
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 skill: ${CYAN}$skills_dst/$plugin_name${NC}"
         fi
@@ -157,10 +243,30 @@ install_skill() {
         # 复制 scripts/ 目录（plugin 辅助脚本，双目标）
         if [ -d "$plugin_dir/scripts" ]; then
             local scripts_dst="$target/scripts/$plugin_name"
+            # 先清空整个 plugin 专属脚本目录，避免旧脚本残留
+            rm -rf "$scripts_dst"
             mkdir -p "$scripts_dst"
             cp -r "$plugin_dir/scripts/"* "$scripts_dst/"
             chmod +x "$scripts_dst"/*.sh 2>/dev/null || true
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 scripts: ${CYAN}$scripts_dst/${NC}"
+        fi
+
+        # 写入新 manifest
+        if [ "$has_jq" -eq 1 ]; then
+            mkdir -p "$manifest_dir"
+            local skills_json commands_json agents_json
+            skills_json=$(printf '%s\n' "$new_skills_list" | jq -R . | jq -sc 'map(select(. != ""))')
+            commands_json=$(printf '%s\n' "$new_commands_list" | jq -R . | jq -sc 'map(select(. != ""))')
+            agents_json=$(printf '%s\n' "$new_agents_list" | jq -R . | jq -sc 'map(select(. != ""))')
+            local has_scripts_json="false"
+            [ "$new_has_scripts" -eq 1 ] && has_scripts_json="true"
+            jq -n \
+                --argjson skills "$skills_json" \
+                --argjson commands "$commands_json" \
+                --argjson agents "$agents_json" \
+                --argjson has_scripts "$has_scripts_json" \
+                '{skills:$skills, commands:$commands, agents:$agents, has_scripts:$has_scripts}' \
+                > "$manifest_file.tmp" && mv "$manifest_file.tmp" "$manifest_file"
         fi
 
         # 复制 rules/ 子目录（编码规范规则）
@@ -229,105 +335,107 @@ install_skill() {
         fi
     done
 
-    # Hook 配置提示（需手动或自动合并到 settings.json）
+    # Claude Hook 配置 upsert 到 settings.json
     if [ -f "$plugin_dir/hooks/settings-snippet.json" ]; then
         local claude_settings="$HOME/.claude/settings.json"
         echo
         echo -e "${YELLOW}⚡ Hook 配置需合并到 Claude Code settings:${NC}"
-        if command -v jq >/dev/null 2>&1 && [ -f "$claude_settings" ]; then
-            # 自动合并 hook 配置：逐条 hook 去重（按 statusMessage 或 command 前64字符）
-            local snippet="$plugin_dir/hooks/settings-snippet.json"
-            local hooks_to_add
-            hooks_to_add=$(jq '.hooks.PostToolUse // []' "$snippet" 2>/dev/null)
-            if [ -n "$hooks_to_add" ] && [ "$hooks_to_add" != "[]" ]; then
-                local added=0
-                local skipped=0
-                # 遍历 snippet 中每个 PostToolUse 条目，逐条去重后 append
-                local count
-                count=$(jq 'length' <<< "$hooks_to_add" 2>/dev/null || echo 0)
-                for i in $(seq 0 $((count - 1))); do
-                    local entry
-                    entry=$(jq ".[$i]" <<< "$hooks_to_add" 2>/dev/null)
-                    # 取该条目第一个 hook 的 statusMessage 作为去重 key
-                    local msg
-                    msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$entry" 2>/dev/null)
-                    local exists=0
-                    if [ -n "$msg" ]; then
-                        exists=$(jq --arg m "$msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $m)] | length' "$claude_settings" 2>/dev/null || echo 0)
-                    fi
-                    if [ "${exists:-0}" -gt 0 ]; then
-                        skipped=$((skipped + 1))
-                    else
-                        jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' "$claude_settings" > "${claude_settings}.tmp" \
-                            && mv "${claude_settings}.tmp" "$claude_settings"
-                        added=$((added + 1))
-                    fi
-                done
-                if [ $added -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} 已自动合并 $added 条 Hook 配置到 ${CYAN}$claude_settings${NC}"
-                fi
-                if [ $skipped -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} $skipped 条 Hook 已存在于 settings.json，无需重复添加"
-                fi
-            fi
+        if command -v jq >/dev/null 2>&1; then
+            [ -f "$claude_settings" ] || echo '{}' > "$claude_settings"
+            merge_hooks_into "$plugin_dir/hooks/settings-snippet.json" "$claude_settings"
         else
             echo -e "  请手动将以下文件内容合并到 ${CYAN}$claude_settings${NC}:"
             echo -e "  ${CYAN}$plugin_dir/hooks/settings-snippet.json${NC}"
-            [ ! -f "$claude_settings" ] && echo -e "  ${YELLOW}提示: settings.json 不存在，请先创建${NC}"
-            ! command -v jq >/dev/null 2>&1 && echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
+            echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
         fi
     fi
 
-    # Codex Hook 配置自动合并到 hooks.json
+    # Codex Hook 配置 upsert 到 hooks.json
     if [ -f "$plugin_dir/hooks/codex-settings-snippet.json" ]; then
         local codex_hooks="$HOME/.codex/hooks.json"
         echo
         echo -e "${YELLOW}⚡ Hook 配置需合并到 Codex hooks.json:${NC}"
         if command -v jq >/dev/null 2>&1; then
-            local codex_snippet="$plugin_dir/hooks/codex-settings-snippet.json"
-            local codex_hooks_to_add
-            codex_hooks_to_add=$(jq '.hooks.PostToolUse // []' "$codex_snippet" 2>/dev/null)
-            if [ -n "$codex_hooks_to_add" ] && [ "$codex_hooks_to_add" != "[]" ]; then
-                if [ ! -f "$codex_hooks" ]; then
-                    echo '{"hooks":{}}' > "$codex_hooks"
-                fi
-                local codex_added=0
-                local codex_skipped=0
-                local codex_count
-                codex_count=$(jq 'length' <<< "$codex_hooks_to_add" 2>/dev/null || echo 0)
-                for i in $(seq 0 $((codex_count - 1))); do
-                    local codex_entry
-                    codex_entry=$(jq ".[$i]" <<< "$codex_hooks_to_add" 2>/dev/null)
-                    local codex_msg
-                    codex_msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$codex_entry" 2>/dev/null)
-                    local codex_exists=0
-                    if [ -n "$codex_msg" ]; then
-                        codex_exists=$(jq --arg m "$codex_msg" '[.hooks.PostToolUse[]?.hooks[]? | select(.statusMessage == $m)] | length' "$codex_hooks" 2>/dev/null || echo 0)
-                    fi
-                    if [ "${codex_exists:-0}" -gt 0 ]; then
-                        codex_skipped=$((codex_skipped + 1))
-                    else
-                        jq --argjson e "$codex_entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' "$codex_hooks" > "${codex_hooks}.tmp" \
-                            && mv "${codex_hooks}.tmp" "$codex_hooks"
-                        codex_added=$((codex_added + 1))
-                    fi
-                done
-                if [ $codex_added -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} 已自动合并 $codex_added 条 Hook 配置到 ${CYAN}$codex_hooks${NC}"
-                fi
-                if [ $codex_skipped -gt 0 ]; then
-                    echo -e "  ${GREEN}✓${NC} $codex_skipped 条 Hook 已存在于 hooks.json，无需重复添加"
-                fi
-            fi
+            [ -f "$codex_hooks" ] || echo '{"hooks":{}}' > "$codex_hooks"
+            merge_hooks_into "$plugin_dir/hooks/codex-settings-snippet.json" "$codex_hooks"
         else
             echo -e "  ${YELLOW}提示: 安装 jq 可启用自动合并 (brew install jq)${NC}"
         fi
     fi
 }
 
+# Upsert PostToolUse hook entries from <snippet> into <settings>。
+# 以每条 entry 的 .hooks[0].statusMessage 作为标识 key：
+#   - 不存在 → append（added）
+#   - 存在且内容相同 → 跳过（unchanged）
+#   - 存在但内容不同 → 替换（updated）
+# 写入采用 tmp + mv 原子替换，jq 失败保留原文件。
+merge_hooks_into() {
+    local snippet="$1"
+    local settings="$2"
+    local hooks_to_add
+    hooks_to_add=$(jq '.hooks.PostToolUse // []' "$snippet" 2>/dev/null)
+    if [ -z "$hooks_to_add" ] || [ "$hooks_to_add" = "[]" ]; then
+        return 0
+    fi
+
+    local added=0 updated=0 unchanged=0
+    local count
+    count=$(jq 'length' <<< "$hooks_to_add" 2>/dev/null || echo 0)
+    for i in $(seq 0 $((count - 1))); do
+        local entry msg idx
+        entry=$(jq ".[$i]" <<< "$hooks_to_add" 2>/dev/null)
+        msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$entry" 2>/dev/null)
+
+        if [ -z "$msg" ]; then
+            # 无 statusMessage 退化为 append（兜底，避免无 key 时无限累加）
+            jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' \
+                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+            added=$((added + 1))
+            continue
+        fi
+
+        idx=$(jq --arg m "$msg" '
+            (.hooks.PostToolUse // []) | to_entries
+            | map(select(any(.value.hooks[]?; .statusMessage == $m)))
+            | (.[0].key // -1)
+        ' "$settings" 2>/dev/null || echo -1)
+
+        if [ "${idx:-"-1"}" = "-1" ] || [ -z "$idx" ]; then
+            jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' \
+                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+            added=$((added + 1))
+        else
+            local existing
+            existing=$(jq -c --argjson i "$idx" '.hooks.PostToolUse[$i]' "$settings" 2>/dev/null)
+            local incoming
+            incoming=$(jq -c '.' <<< "$entry" 2>/dev/null)
+            if [ "$existing" = "$incoming" ]; then
+                unchanged=$((unchanged + 1))
+            else
+                jq --argjson e "$entry" --argjson i "$idx" '.hooks.PostToolUse[$i] = $e' \
+                    "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+                updated=$((updated + 1))
+            fi
+        fi
+    done
+
+    if [ $added -gt 0 ]; then
+        echo -e "  ${GREEN}✓${NC} 已新增 $added 条 Hook 配置到 ${CYAN}$settings${NC}"
+    fi
+    if [ $updated -gt 0 ]; then
+        echo -e "  ${GREEN}↻${NC} 已更新 $updated 条 Hook 配置（command 内容变化）"
+    fi
+    if [ $unchanged -gt 0 ]; then
+        echo -e "  ${GREEN}=${NC} $unchanged 条 Hook 已是最新，无需更改"
+    fi
+}
+
 uninstall_skill() {
     local plugin_name="$1"
     local removed=false
+    local has_jq=0
+    command -v jq >/dev/null 2>&1 && has_jq=1
 
     for target in "${TARGETS[@]}"; do
         local target_name
@@ -347,7 +455,53 @@ uninstall_skill() {
             removed=true
         fi
 
-        # 卸载 agents/ 文件（按 plugin 源目录中的文件名逐个删除）
+        # 通过 manifest 清理本插件曾安装过的所有产物（skills/commands/agents/scripts）
+        local manifest_file="$target/.skills-manifest/${plugin_name}.json"
+        if [ "$has_jq" -eq 1 ] && [ -f "$manifest_file" ]; then
+            local m_skills m_commands m_agents m_has_scripts
+            m_skills=$(jq -r '(.skills // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            m_commands=$(jq -r '(.commands // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            m_agents=$(jq -r '(.agents // []) | .[]' "$manifest_file" 2>/dev/null || true)
+            m_has_scripts=$(jq -r '.has_scripts // false' "$manifest_file" 2>/dev/null || echo "false")
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$target/skills/$name"
+                if [ -d "$p" ]; then
+                    rm -rf "$p"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 skill: ${CYAN}$p${NC}"
+                    removed=true
+                fi
+            done <<< "$m_skills"
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$target/commands/$name"
+                if [ -f "$p" ]; then
+                    rm -f "$p"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 command: ${CYAN}$p${NC}"
+                    removed=true
+                fi
+            done <<< "$m_commands"
+            while IFS= read -r name; do
+                [ -z "$name" ] && continue
+                local p="$target/agents/$name"
+                if [ -f "$p" ]; then
+                    rm -f "$p"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 agent: ${CYAN}$p${NC}"
+                    removed=true
+                fi
+            done <<< "$m_agents"
+            if [ "$m_has_scripts" = "true" ]; then
+                local p="$target/scripts/$plugin_name"
+                if [ -d "$p" ]; then
+                    rm -rf "$p"
+                    echo -e "${GREEN}✓${NC} [${target_name}] 已卸载 scripts: ${CYAN}$p${NC}"
+                    removed=true
+                fi
+            fi
+            rm -f "$manifest_file"
+        fi
+
+        # 卸载 agents/ 文件（按 plugin 源目录中的文件名逐个删除，作为 manifest 缺失时的兜底）
         local plugin_agents_dir="$SCRIPT_DIR/plugins/$plugin_name/agents"
         if [ -d "$plugin_agents_dir" ]; then
             for agent_file in "$plugin_agents_dir"/*; do
