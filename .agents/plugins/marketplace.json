@@ -1,0 +1,118 @@
+{
+  "name": "yuxilong-skills",
+  "interface": {
+    "displayName": "YuXilong iOS Skills"
+  },
+  "plugins": [
+    {
+      "name": "wk-scan-clean-code",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-scan-clean-code"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-ios-component-reuse",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-ios-component-reuse"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-symbol-reference-scan",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-symbol-reference-scan"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-review",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-review"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-sync-pb",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-sync-pb"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "ios-blocked-words-check",
+      "source": {
+        "source": "local",
+        "path": "./plugins/ios-blocked-words-check"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-lark-wiki",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-lark-wiki"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-crash-repro-fix",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-crash-repro-fix"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-gh-pr-review-fix",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-gh-pr-review-fix"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-xcodebuild",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-xcodebuild"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    }
+  ]
+}

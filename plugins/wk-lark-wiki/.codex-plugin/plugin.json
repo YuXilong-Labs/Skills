@@ -1,0 +1,20 @@
+{
+  "name": "wk-lark-wiki",
+  "version": "1.1.0",
+  "description": "iOS 组件 API 文档生成、AI 深度润色与飞书知识库上传；支持单组件 /wk-lark-wiki 与批量 /wk-lark-wiki-batch",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "wk lark wiki",
+    "shortDescription": "iOS 组件 API 文档生成、AI 深度润色与飞书知识库上传；支持单组件 /wk-lark-wiki 与批量 /wk-",
+    "category": "Development",
+    "capabilities": [
+      "Read"
+    ],
+    "brandColor": "#147EFB"
+  }
+}
