@@ -81,6 +81,26 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install ios-dev-rules@yuxilong-skills
 ```
 
+### 方式 2b：Codex 原生 Marketplace
+
+> 需要 Codex CLI ≥ 0.120（`codex plugin marketplace`）。
+
+```bash
+# 添加 marketplace（GitHub 简写 / 本地目录均可）
+codex plugin marketplace add YuXilong-Labs/Skills
+codex plugin marketplace add ./            # 在仓库根目录本地添加
+
+# 查看与安装
+codex plugin list
+codex plugin add wk-xcodebuild@yuxilong-skills
+codex plugin add wk-review@yuxilong-skills
+```
+
+Codex 目录清单位于 `.agents/plugins/marketplace.json`，每个 plugin 的 Codex 清单为
+`<plugin>/.codex-plugin/plugin.json`。原生通道编入 **10 个 skill 类 plugin**；
+`ios-dev-rules`（规则类）与 `ios-blocked-words-hook`（hook 跨 plugin 依赖）不走原生通道，
+请用方式 3 的 `install.sh` 安装。
+
 ### 方式 3：手动安装
 
 ```bash
