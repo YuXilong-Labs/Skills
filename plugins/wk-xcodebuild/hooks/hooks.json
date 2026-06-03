@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'root=\"${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-$PLUGIN_ROOT}}\"; exec \"$root/scripts/xcb-guard.sh\"'",
+            "statusMessage": "wk-xcodebuild: 拦截裸 xcodebuild",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

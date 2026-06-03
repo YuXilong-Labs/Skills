@@ -1,0 +1,20 @@
+{
+  "name": "wk-xcodebuild",
+  "version": "1.0.0",
+  "description": "xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  },
+  "license": "MIT",
+  "keywords": ["xcodebuild", "ios", "build", "test", "token-optimization"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "WK Xcodebuild",
+    "shortDescription": "自动选 USB 真机 + 精简 xcodebuild 输出",
+    "category": "Development",
+    "capabilities": ["Read", "Write"],
+    "brandColor": "#147EFB"
+  }
+}
