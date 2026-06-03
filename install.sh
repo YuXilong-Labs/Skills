@@ -148,11 +148,20 @@ install_skill() {
         local old_agents_list=""
         local old_has_scripts=0
         if [ "$has_jq" -eq 1 ] && [ -f "$manifest_file" ]; then
-            old_skills_list=$(jq -r '(.skills // []) | .[]' "$manifest_file" 2>/dev/null || true)
-            old_commands_list=$(jq -r '(.commands // []) | .[]' "$manifest_file" 2>/dev/null || true)
-            old_agents_list=$(jq -r '(.agents // []) | .[]' "$manifest_file" 2>/dev/null || true)
-            old_has_scripts=$(jq -r '.has_scripts // false' "$manifest_file" 2>/dev/null || echo "false")
-            [ "$old_has_scripts" = "true" ] && old_has_scripts=1 || old_has_scripts=0
+            # 单次 jq 调用一次性读取所有字段，避免 4 次 fork
+            local old_dump
+            old_dump=$(jq -r '
+                (.skills // []) | @tsv,
+                (.commands // []) | @tsv,
+                (.agents // []) | @tsv,
+                (.has_scripts // false | tostring)
+            ' "$manifest_file" 2>/dev/null || true)
+            old_skills_list=$(printf '%s\n' "$old_dump" | sed -n '1p' | tr '\t' '\n')
+            old_commands_list=$(printf '%s\n' "$old_dump" | sed -n '2p' | tr '\t' '\n')
+            old_agents_list=$(printf '%s\n' "$old_dump" | sed -n '3p' | tr '\t' '\n')
+            local old_scripts_flag
+            old_scripts_flag=$(printf '%s\n' "$old_dump" | sed -n '4p')
+            [ "$old_scripts_flag" = "true" ] && old_has_scripts=1 || old_has_scripts=0
         fi
 
         # 计算当前仓库内的清单
@@ -251,22 +260,25 @@ install_skill() {
             echo -e "${GREEN}✓${NC} [${target_name}] 已安装 scripts: ${CYAN}$scripts_dst/${NC}"
         fi
 
-        # 写入新 manifest
+        # 写入新 manifest（单次 jq 调用：通过 3 行 TSV stdin 一次性构建）
         if [ "$has_jq" -eq 1 ]; then
             mkdir -p "$manifest_dir"
-            local skills_json commands_json agents_json
-            skills_json=$(printf '%s\n' "$new_skills_list" | jq -R . | jq -sc 'map(select(. != ""))')
-            commands_json=$(printf '%s\n' "$new_commands_list" | jq -R . | jq -sc 'map(select(. != ""))')
-            agents_json=$(printf '%s\n' "$new_agents_list" | jq -R . | jq -sc 'map(select(. != ""))')
             local has_scripts_json="false"
             [ "$new_has_scripts" -eq 1 ] && has_scripts_json="true"
-            jq -n \
-                --argjson skills "$skills_json" \
-                --argjson commands "$commands_json" \
-                --argjson agents "$agents_json" \
-                --argjson has_scripts "$has_scripts_json" \
-                '{skills:$skills, commands:$commands, agents:$agents, has_scripts:$has_scripts}' \
-                > "$manifest_file.tmp" && mv "$manifest_file.tmp" "$manifest_file"
+            {
+                printf '%s\n' "$new_skills_list" | paste -sd '\t' -
+                printf '%s\n' "$new_commands_list" | paste -sd '\t' -
+                printf '%s\n' "$new_agents_list" | paste -sd '\t' -
+            } | jq -Rsc --argjson has_scripts "$has_scripts_json" '
+                split("\n")
+                | def clean: split("\t") | map(select(. != ""));
+                {
+                    skills:    (.[0] // "" | clean),
+                    commands:  (.[1] // "" | clean),
+                    agents:    (.[2] // "" | clean),
+                    has_scripts: $has_scripts
+                }
+            ' > "$manifest_file.tmp" && mv "$manifest_file.tmp" "$manifest_file"
         fi
 
         # 复制 rules/ 子目录（编码规范规则）
@@ -373,60 +385,64 @@ install_skill() {
 merge_hooks_into() {
     local snippet="$1"
     local settings="$2"
-    local hooks_to_add
-    hooks_to_add=$(jq '.hooks.PostToolUse // []' "$snippet" 2>/dev/null)
-    if [ -z "$hooks_to_add" ] || [ "$hooks_to_add" = "[]" ]; then
+
+    # 单次 jq 调用：遍历 snippet 中存在的所有事件类型（PreToolUse / PostToolUse / ...），
+    # 对每条 entry 按 statusMessage 定位并 upsert。
+    # 输出格式：第 1 行 JSON = 新 settings；第 2 行 = "added\tupdated\tunchanged" 统计。
+    local result
+    result=$(jq -nc --slurpfile snip "$snippet" --slurpfile cur "$settings" '
+        ($snip[0].hooks // {}) as $byevt
+        | def upsert($s; $evt; $e):
+            ($e.hooks[0].statusMessage // "") as $msg
+            | ($s.hooks[$evt] // []) as $arr
+            | if $msg == "" then
+                  {settings: ($s | .hooks[$evt] = ($arr + [$e])), action: "added"}
+              else
+                  ([range(0; $arr|length)] | map(. as $i | select(any($arr[$i].hooks[]?; .statusMessage == $msg))) | first // -1) as $idx
+                  | if $idx == -1 then
+                        {settings: ($s | .hooks[$evt] = ($arr + [$e])), action: "added"}
+                    elif ($arr[$idx] == $e) then
+                        {settings: $s, action: "unchanged"}
+                    else
+                        {settings: ($s | .hooks[$evt][$idx] = $e), action: "updated"}
+                    end
+              end
+        ;
+        reduce ($byevt | keys_unsorted[]) as $evt (
+            {settings: $cur[0], added: 0, updated: 0, unchanged: 0};
+            reduce ($byevt[$evt][]) as $e (.;
+                upsert(.settings; $evt; $e) as $r
+                | .settings = $r.settings
+                | if   $r.action == "added"     then .added     += 1
+                  elif $r.action == "updated"   then .updated   += 1
+                  else                                .unchanged += 1
+                  end
+            )
+        )
+        | .settings, "\(.added) \(.updated) \(.unchanged)"
+    ' 2>/dev/null)
+
+    if [ -z "$result" ]; then
         return 0
     fi
 
-    local added=0 updated=0 unchanged=0
-    local count
-    count=$(jq 'length' <<< "$hooks_to_add" 2>/dev/null || echo 0)
-    for i in $(seq 0 $((count - 1))); do
-        local entry msg idx
-        entry=$(jq ".[$i]" <<< "$hooks_to_add" 2>/dev/null)
-        msg=$(jq -r '.hooks[0].statusMessage // empty' <<< "$entry" 2>/dev/null)
+    local new_settings stats
+    new_settings=$(printf '%s' "$result" | sed -n '1p')
+    stats=$(printf '%s' "$result" | sed -n '2p' | tr -d '"')
+    local added updated unchanged
+    read -r added updated unchanged <<< "$stats"
 
-        if [ -z "$msg" ]; then
-            # 无 statusMessage 退化为 append（兜底，避免无 key 时无限累加）
-            jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' \
-                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
-            added=$((added + 1))
-            continue
-        fi
+    if [ "${added:-0}" -gt 0 ] || [ "${updated:-0}" -gt 0 ]; then
+        printf '%s\n' "$new_settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+    fi
 
-        idx=$(jq --arg m "$msg" '
-            (.hooks.PostToolUse // []) | to_entries
-            | map(select(any(.value.hooks[]?; .statusMessage == $m)))
-            | (.[0].key // -1)
-        ' "$settings" 2>/dev/null || echo -1)
-
-        if [ "${idx:-"-1"}" = "-1" ] || [ -z "$idx" ]; then
-            jq --argjson e "$entry" '.hooks.PostToolUse = (.hooks.PostToolUse // []) + [$e]' \
-                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
-            added=$((added + 1))
-        else
-            local existing
-            existing=$(jq -c --argjson i "$idx" '.hooks.PostToolUse[$i]' "$settings" 2>/dev/null)
-            local incoming
-            incoming=$(jq -c '.' <<< "$entry" 2>/dev/null)
-            if [ "$existing" = "$incoming" ]; then
-                unchanged=$((unchanged + 1))
-            else
-                jq --argjson e "$entry" --argjson i "$idx" '.hooks.PostToolUse[$i] = $e' \
-                    "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
-                updated=$((updated + 1))
-            fi
-        fi
-    done
-
-    if [ $added -gt 0 ]; then
+    if [ "${added:-0}" -gt 0 ]; then
         echo -e "  ${GREEN}✓${NC} 已新增 $added 条 Hook 配置到 ${CYAN}$settings${NC}"
     fi
-    if [ $updated -gt 0 ]; then
+    if [ "${updated:-0}" -gt 0 ]; then
         echo -e "  ${GREEN}↻${NC} 已更新 $updated 条 Hook 配置（command 内容变化）"
     fi
-    if [ $unchanged -gt 0 ]; then
+    if [ "${unchanged:-0}" -gt 0 ]; then
         echo -e "  ${GREEN}=${NC} $unchanged 条 Hook 已是最新，无需更改"
     fi
 }

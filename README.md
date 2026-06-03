@@ -16,6 +16,7 @@
 | `wk-lark-wiki-batch` | 批量生成 main 分支基础组件 API 文档，默认 Haiku 深度润色并上传飞书 Wiki | 批量（固定流程） | 无 |
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
+| `wk-xcodebuild` | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token | 透传 xcodebuild 参数 | 无 |
 
 ## Rules（编码规范）
 
@@ -28,6 +29,7 @@
 | Hook | 类型 | 触发时机 | 描述 |
 |------|------|----------|------|
 | `ios-blocked-words-hook` | `PostToolUse` | `Edit` / `Write` iOS 源码文件后 | 自动触发禁止关键词检查，非阻塞，发现违规时注入警告并禁止 git commit |
+| `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 前 | 拦截并引导改用 `xcb-run.sh` 包装器（自动选真机 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
 
 ## Commands（斜杠命令）
 
@@ -43,6 +45,7 @@
 | `/wk-lark-wiki-batch` | 批量 main 分支基础组件文档生成 + Haiku 润色 + 飞书上传 | `wk-lark-wiki-batch` |
 | `/wk-crash-repro-fix` | iOS Crash 端到端闭环排查（根因→复现→修复→回归） | `wk-crash-repro-fix` |
 | `/wk-gh-pr-review-fix` | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | `wk-gh-pr-review-fix` |
+| `/wk-xcodebuild` | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac）并精简编译/测试输出 | `wk-xcodebuild` |
 | `/ios-dev-rules` | 安装 iOS 开发规则包（ObjC/Swift/Ruby）+ 检测远端版本更新 | `ios-dev-rules` |
 
 ## 安装
@@ -74,6 +77,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 /plugin install wk-lark-wiki@yuxilong-skills
 /plugin install wk-crash-repro-fix@yuxilong-skills
 /plugin install wk-gh-pr-review-fix@yuxilong-skills
+/plugin install wk-xcodebuild@yuxilong-skills
 /plugin install ios-dev-rules@yuxilong-skills
 ```
 
@@ -98,6 +102,7 @@ cd Skills
 ./install.sh wk-lark-wiki
 ./install.sh wk-crash-repro-fix
 ./install.sh wk-gh-pr-review-fix
+./install.sh wk-xcodebuild
 ./install.sh ios-dev-rules
 
 ## 使用

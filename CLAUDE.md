@@ -72,6 +72,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-lark-wiki` | Skill | iOS 组件库 API 文档生成、AI 润色与飞书上传 | 无 |
 | `wk-crash-repro-fix` | Skill | iOS Crash 闭环排查（根因→复现→修复→回归验证） | 无 |
 | `wk-gh-pr-review-fix` | Skill | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | 无 |
+| `wk-xcodebuild` | Skill + Hook | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token；PreToolUse 拦截裸 xcodebuild | 无 |
 | `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
 | `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
 | `ios-dev-rules` | Rules | iOS 三语言编码规范（ObjC/Swift/Ruby），安装到 ~/.claude/rules/ | 无 |
