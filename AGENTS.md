@@ -53,9 +53,11 @@ install.sh 会把 hook snippet upsert 进 `~/.codex/hooks.json`（PreToolUse/Pos
 ## Hooks（Codex）
 
 - Codex 的 hooks 引擎与 Claude Code 同构：`PreToolUse` 可拦截 Bash/apply_patch/MCP，"deny wins"。
-- 守卫脚本读 stdin JSON（`tool_name`、`tool_input.command`），deny 用
-  `{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"..."}}` 或 exit 2 + stderr。
-- 例：`wk-xcodebuild` 的 PreToolUse 守卫拦截裸 `xcodebuild`，引导改用 `xcb-run.sh`（`WK_XCB_BYPASS=1` 逃生）。
+- 守卫脚本读 stdin JSON（`tool_name`、`tool_input.command`），可 deny
+  （`permissionDecision:"deny"` 或 exit 2 + stderr）或 **allow + 改写**
+  （`permissionDecision:"allow"` + `updatedInput.command`，非破坏式重写命令）。
+- 例：`wk-xcodebuild` 的 PreToolUse 守卫把裸 `xcodebuild` **静默改写**为 `xcb-run.sh` 调用
+  （`allow`+`updatedInput`，无需 agent 重试）；改写失败才回退 deny。`WK_XCB_BYPASS=1` 逃生。
 
 ## 现有 Skills
 
@@ -70,7 +72,7 @@ install.sh 会把 hook snippet upsert 进 `~/.codex/hooks.json`（PreToolUse/Pos
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 |
 | `ios-blocked-words-check` | App Store 审核禁止关键词检查 |
-| `wk-xcodebuild` | xcodebuild 智能包装（自动选真机 + 精简输出 + PreToolUse 拦截） |
+| `wk-xcodebuild` | xcodebuild 智能包装（自动选真机 + 精简输出 + PreToolUse 静默改写） |
 
 ## 约定
 

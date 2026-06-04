@@ -18,7 +18,8 @@ description: |
 
 1. **目标设备自动化** — USB 真机优先，多台询问用户，无真机回退 My Mac。
 2. **输出精简（rtk 风格）** — 千行 xcodebuild 输出 → 几十行关键摘要，省 token。
-3. **自动启用** — PreToolUse Hook 拦截裸 `xcodebuild`，引导走包装器。
+3. **自动启用（静默改写）** — PreToolUse Hook 检测到裸 `xcodebuild` 时，直接把命令
+   改写为包装器调用（`allow` + `updatedInput`），无需 agent 重试一次；改写失败才回退 deny。
 
 两端通用：Claude Code 与 Codex CLI 同一套脚本与 hook。
 

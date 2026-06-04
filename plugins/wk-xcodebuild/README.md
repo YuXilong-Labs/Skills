@@ -9,7 +9,8 @@ xcodebuild 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目�
    `-destination`；多台询问用户；无真机回退 `platform=macOS`。
 2. **输出精简（rtk 风格）** — 千行 xcodebuild 输出 → 几十行关键摘要（结果 / error /
    链接 / 签名 / 测试失败 / warning 去重计数），完整日志落盘按需读取。
-3. **自动启用** — PreToolUse Hook 拦截裸 `xcodebuild`，引导改用包装器。
+3. **自动启用（静默改写）** — PreToolUse Hook 检测到裸 `xcodebuild` 时，直接将命令
+   改写为包装器调用（`allow` + `updatedInput`），agent 无感、不需重试；改写失败才回退 deny。
 
 ## 实测 token 收益
 
@@ -55,7 +56,7 @@ xcb-gain --reset      # 清空统计
 | `scripts/xcb-run.sh` | 包装器：选目标 + 跑 xcodebuild + 落盘 + 输出精简摘要 |
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
 | `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
-| `scripts/xcb-guard.sh` | PreToolUse 守卫：拦截裸 xcodebuild |
+| `scripts/xcb-guard.sh` | PreToolUse 守卫：裸 xcodebuild 静默改写为 xcb-run.sh（allow + updatedInput） |
 | `scripts/xcb-stats.sh` | token 收益统计查看器（`xcb-gain`） |
 | `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`、`xcb-gain=xcb-stats.sh`，install.sh 据此软链命令到 PATH |
 | `hooks/hooks.json` | 原生 plugin hook（`${PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_ROOT}`） |

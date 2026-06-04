@@ -29,7 +29,7 @@
 | Hook | 类型 | 触发时机 | 描述 |
 |------|------|----------|------|
 | `ios-blocked-words-hook` | `PostToolUse` | Claude：`Edit`/`Write` 后；Codex：`apply_patch` 后 | 自动触发禁止关键词检查（**双端**），非阻塞，发现违规时注入警告并禁止 git commit |
-| `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 前 | 拦截并引导改用 `xcb-run.sh` 包装器（自动选真机 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
+| `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 前 | **静默改写**为 `xcb-run.sh` 包装器（`allow`+`updatedInput`，无需 agent 重试，自动选真机 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
 
 ## Commands（斜杠命令）
 
