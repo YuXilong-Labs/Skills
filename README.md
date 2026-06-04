@@ -16,7 +16,7 @@
 | `wk-lark-wiki-batch` | 批量生成 main 分支基础组件 API 文档，默认 Haiku 深度润色并上传飞书 Wiki | 批量（固定流程） | 无 |
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
-| `wk-xcodebuild` | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token | 透传 xcodebuild 参数 | 无 |
+| `wk-xcodebuild` | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出（真实工程实测省 ~99.7% token） | 透传 xcodebuild 参数 | 无 |
 
 ## Rules（编码规范）
 
