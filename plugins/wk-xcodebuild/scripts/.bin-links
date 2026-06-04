@@ -1,0 +1,3 @@
+# 声明要软链到 PATH 的命令：<命令名>=<scripts 下的脚本文件>
+# install.sh 安装时在 PATH 可写目录创建软链，uninstall 时移除。
+xcb=xcb-run.sh

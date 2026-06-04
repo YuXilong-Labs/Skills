@@ -24,7 +24,15 @@
 
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 解析自身真实目录（兼容经 PATH 上的符号链接调用，如 ~/.local/bin/xcb → xcb-run.sh），
+# 否则 SCRIPT_DIR 会指向软链所在目录而找不到同级的 xcb-devices.sh / xcb-summarize.awk。
+_src="${BASH_SOURCE[0]}"
+while [ -h "$_src" ]; do
+    _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+    _src="$(readlink "$_src")"
+    case "$_src" in /*) ;; *) _src="$_dir/$_src" ;; esac
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 DEVICES_SH="$SCRIPT_DIR/xcb-devices.sh"
 SUMMARIZE_AWK="$SCRIPT_DIR/xcb-summarize.awk"
 

@@ -347,6 +347,27 @@ install_skill() {
         fi
     done
 
+    # 把 scripts/.bin-links 声明的命令软链到 PATH 上的可写目录（便于终端直接调用，如 `xcb`）
+    # 软链统一指向 .claude 目标下的脚本（install.sh 始终双目标安装，该副本必然存在）。
+    if [ -f "$plugin_dir/scripts/.bin-links" ]; then
+        local bindir
+        bindir=$(pick_bin_dir)
+        if [ -n "$bindir" ]; then
+            while IFS='=' read -r link script; do
+                link=$(printf '%s' "$link" | tr -d '[:space:]')
+                script=$(printf '%s' "$script" | tr -d '[:space:]')
+                [ -z "$link" ] && continue
+                case "$link" in \#*) continue ;; esac
+                local target_script="$HOME/.claude/scripts/$plugin_name/$script"
+                ln -sf "$target_script" "$bindir/$link"
+                echo -e "${GREEN}✓${NC} 已链接命令: ${CYAN}$bindir/$link${NC} → ${plugin_name}/${script}"
+            done < "$plugin_dir/scripts/.bin-links"
+        else
+            echo -e "${YELLOW}⚠ PATH 上无可写 bin 目录，跳过命令软链${NC}"
+            echo -e "  可手动加入 PATH：${CYAN}export PATH=\"\$HOME/.claude/scripts/$plugin_name:\$PATH\"${NC}"
+        fi
+    fi
+
     # Claude Hook 配置 upsert 到 settings.json
     if [ -f "$plugin_dir/hooks/settings-snippet.json" ]; then
         local claude_settings="$HOME/.claude/settings.json"
@@ -382,6 +403,40 @@ install_skill() {
 #   - 存在且内容相同 → 跳过（unchanged）
 #   - 存在但内容不同 → 替换（updated）
 # 写入采用 tmp + mv 原子替换，jq 失败保留原文件。
+# 选择 PATH 上第一个存在且可写的 bin 目录（偏好用户级 ~/.local/bin），找不到则输出空。
+pick_bin_dir() {
+    local d
+    for d in "$HOME/.local/bin" "/usr/local/bin" "/opt/homebrew/bin" "$HOME/bin"; do
+        case ":$PATH:" in *":$d:"*) ;; *) continue ;; esac
+        [ -d "$d" ] && [ -w "$d" ] && { printf '%s' "$d"; return 0; }
+    done
+    return 0
+}
+
+# 移除某 plugin 经 .bin-links 创建的命令软链（仅删指向该 plugin scripts 的软链，安全）。
+unlink_plugin_bins() {
+    local plugin_name="$1"
+    local binlinks="$SCRIPT_DIR/plugins/$plugin_name/scripts/.bin-links"
+    [ -f "$binlinks" ] || return 0
+    local link script d tgt
+    while IFS='=' read -r link script; do
+        link=$(printf '%s' "$link" | tr -d '[:space:]')
+        [ -z "$link" ] && continue
+        case "$link" in \#*) continue ;; esac
+        for d in "$HOME/.local/bin" "/usr/local/bin" "/opt/homebrew/bin" "$HOME/bin"; do
+            if [ -L "$d/$link" ]; then
+                tgt=$(readlink "$d/$link")
+                case "$tgt" in
+                    */scripts/"$plugin_name"/*)
+                        rm -f "$d/$link"
+                        echo -e "${GREEN}✓${NC} 已移除命令软链: ${CYAN}$d/$link${NC}"
+                        ;;
+                esac
+            fi
+        done
+    done < "$binlinks"
+}
+
 merge_hooks_into() {
     local snippet="$1"
     local settings="$2"
@@ -557,6 +612,9 @@ uninstall_skill() {
             fi
         fi
     done
+
+    # 移除 .bin-links 创建的命令软链
+    unlink_plugin_bins "$plugin_name"
 
     # Hook 配置清理提示
     if [ -f "$SCRIPT_DIR/plugins/$plugin_name/hooks/settings-snippet.json" ]; then

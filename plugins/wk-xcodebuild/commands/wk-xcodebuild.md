@@ -20,6 +20,9 @@ skill_file: skills/wk-xcodebuild/SKILL.md
 
 参数与标准 xcodebuild 完全一致。
 
+> 终端手动调用可用 install.sh 软链的短命令 `xcb`（≡ `xcb-run.sh`），
+> 如 `xcb build -scheme App ...`；找不到时用完整路径 `~/.claude/scripts/wk-xcodebuild/xcb-run.sh`。
+
 ## 使用示例
 
 ### 编译（自动选目标）

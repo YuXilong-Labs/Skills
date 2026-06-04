@@ -19,6 +19,7 @@ xcodebuild 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目�
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
 | `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
 | `scripts/xcb-guard.sh` | PreToolUse 守卫：拦截裸 xcodebuild |
+| `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`，install.sh 据此软链命令到 PATH |
 | `hooks/hooks.json` | 原生 plugin hook（`${PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_ROOT}`） |
 | `hooks/settings-snippet.json` | install.sh → Claude 的 PreToolUse 合并片段 |
 | `hooks/codex-settings-snippet.json` | install.sh → Codex 的 PreToolUse 合并片段 |
@@ -44,16 +45,21 @@ PreToolUse Hook 自动合并进 `~/.claude/settings.json` 与 `~/.codex/hooks.js
 ## 用法
 
 ```bash
-# 直接用包装器（参数同 xcodebuild）
+# 短命令 xcb（install.sh 已软链到 PATH，优先 ~/.local/bin）
+xcb build -scheme App -workspace App.xcworkspace
+xcb test  -scheme App -project App.xcodeproj
+
+# 等价的完整路径（任意 shell 都可用）
 ~/.claude/scripts/wk-xcodebuild/xcb-run.sh build -scheme App -workspace App.xcworkspace
-~/.claude/scripts/wk-xcodebuild/xcb-run.sh test  -scheme App -project App.xcodeproj
 
 # 多真机：选定后强制目标
-WK_XCB_DEST="id=<UDID>" ~/.claude/scripts/wk-xcodebuild/xcb-run.sh build -scheme App ...
+WK_XCB_DEST="id=<UDID>" xcb build -scheme App ...
 
 # 逃生舱：直跑原始 xcodebuild（Hook 放行）
 WK_XCB_BYPASS=1 xcodebuild -version
 ```
+
+> `xcb` 找不到？说明软链目录不在 PATH。用完整路径，或把 `~/.claude/scripts/wk-xcodebuild` 加入 PATH。
 
 或斜杠命令：`/wk-xcodebuild build -scheme App -workspace App.xcworkspace`。
 

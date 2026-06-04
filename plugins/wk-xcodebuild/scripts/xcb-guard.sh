@@ -14,7 +14,14 @@
 
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 解析自身真实目录（兼容经符号链接调用）
+_src="${BASH_SOURCE[0]}"
+while [ -h "$_src" ]; do
+    _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+    _src="$(readlink "$_src")"
+    case "$_src" in /*) ;; *) _src="$_dir/$_src" ;; esac
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 WRAPPER="$SCRIPT_DIR/xcb-run.sh"
 
 payload="$(cat 2>/dev/null)"

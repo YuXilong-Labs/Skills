@@ -34,18 +34,27 @@ description: |
 
 核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）。
 
+install.sh 还会把 `xcb` 命令软链到 PATH（优先 `~/.local/bin`），即 `xcb` ≡ `xcb-run.sh`。
+
 ---
 
 ## 工作流
 
 ### 第 1 步：用包装器替代裸 xcodebuild
 
-**任何 build/test 类 xcodebuild 调用都改用 `xcb-run.sh`**，参数完全相同：
+**任何 build/test 类 xcodebuild 调用都改用包装器**，参数完全相同。两种等价写法：
 
 ```bash
+# 完整路径（最稳，非交互/任意 shell 都可用 —— agent 优先用这个）
 ~/.claude/scripts/wk-xcodebuild/xcb-run.sh build -scheme App -workspace App.xcworkspace
-~/.claude/scripts/wk-xcodebuild/xcb-run.sh test  -scheme App -project App.xcodeproj
+
+# 短命令 xcb（install.sh 已软链到 PATH，终端手动调用更顺手）
+xcb build -scheme App -workspace App.xcworkspace
+xcb test  -scheme App -project App.xcodeproj
 ```
+
+> `xcb` 由 install.sh 软链到 PATH 可写目录（优先 `~/.local/bin`）。若 `command -v xcb`
+> 找不到（该目录不在 PATH），用完整路径，或把 `~/.claude/scripts/wk-xcodebuild` 加入 PATH。
 
 包装器自动：选目标设备 → 注入 `-destination` → 运行 → 原始日志落盘 → stdout 仅输出精简摘要。
 
