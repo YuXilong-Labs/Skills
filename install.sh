@@ -437,6 +437,32 @@ unlink_plugin_bins() {
     done < "$binlinks"
 }
 
+# 从 settings/hooks 文件中移除某 snippet 声明的 hook 条目（按 statusMessage 匹配，
+# 遍历 snippet 中所有事件类型）。卸载时调用，避免残留指向已删脚本的悬空 hook。
+remove_hooks_from() {
+    local snippet="$1"
+    local settings="$2"
+    [ -f "$settings" ] || return 0
+    command -v jq >/dev/null 2>&1 || return 0
+
+    local result
+    result=$(jq --slurpfile snip "$snippet" '
+        ($snip[0].hooks // {}) as $byevt
+        | reduce ($byevt | keys_unsorted[]) as $evt (.;
+            ([ $byevt[$evt][].hooks[0].statusMessage // empty ]) as $msgs
+            | .hooks[$evt] = ( (.hooks[$evt] // [])
+                | map(select( (.hooks[0].statusMessage // "—none—") as $sm | ($msgs | index($sm)) | not )) )
+            | if ((.hooks[$evt] // []) | length) == 0 then del(.hooks[$evt]) else . end
+          )
+        | if (.hooks // {}) == {} then del(.hooks) else . end
+    ' "$settings" 2>/dev/null)
+
+    if [ -n "$result" ]; then
+        printf '%s\n' "$result" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+        echo -e "  ${GREEN}✓${NC} 已从 ${CYAN}$settings${NC} 移除该 plugin 的 Hook 条目"
+    fi
+}
+
 merge_hooks_into() {
     local snippet="$1"
     local settings="$2"
@@ -616,9 +642,15 @@ uninstall_skill() {
     # 移除 .bin-links 创建的命令软链
     unlink_plugin_bins "$plugin_name"
 
-    # Hook 配置清理提示
-    if [ -f "$SCRIPT_DIR/plugins/$plugin_name/hooks/settings-snippet.json" ]; then
-        echo -e "${YELLOW}⚠ 请手动检查并移除 ~/.claude/settings.json 中该 Hook 的配置${NC}"
+    # Hook 配置清理：从两端 settings/hooks 文件中移除该 plugin 的 hook 条目
+    local plugin_hooks_dir="$SCRIPT_DIR/plugins/$plugin_name/hooks"
+    if [ -f "$plugin_hooks_dir/settings-snippet.json" ]; then
+        remove_hooks_from "$plugin_hooks_dir/settings-snippet.json" "$HOME/.claude/settings.json"
+        removed=true
+    fi
+    if [ -f "$plugin_hooks_dir/codex-settings-snippet.json" ]; then
+        remove_hooks_from "$plugin_hooks_dir/codex-settings-snippet.json" "$HOME/.codex/hooks.json"
+        removed=true
     fi
 
     if [ "$removed" = false ]; then
