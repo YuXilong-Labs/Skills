@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.codex/scripts/ios-blocked-words-hook/codex_apply_patch_check.sh\"",
+            "timeout": 30,
+            "statusMessage": "iOS 禁止关键词检查中..."
+          }
+        ]
+      }
+    ]
+  }
+}

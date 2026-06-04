@@ -28,7 +28,7 @@
 
 | Hook | 类型 | 触发时机 | 描述 |
 |------|------|----------|------|
-| `ios-blocked-words-hook` | `PostToolUse` | `Edit` / `Write` iOS 源码文件后 | 自动触发禁止关键词检查，非阻塞，发现违规时注入警告并禁止 git commit |
+| `ios-blocked-words-hook` | `PostToolUse` | Claude：`Edit`/`Write` 后；Codex：`apply_patch` 后 | 自动触发禁止关键词检查（**双端**），非阻塞，发现违规时注入警告并禁止 git commit |
 | `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 前 | 拦截并引导改用 `xcb-run.sh` 包装器（自动选真机 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
 
 ## Commands（斜杠命令）
@@ -97,9 +97,11 @@ codex plugin add wk-review@yuxilong-skills
 ```
 
 Codex 目录清单位于 `.agents/plugins/marketplace.json`，每个 plugin 的 Codex 清单为
-`<plugin>/.codex-plugin/plugin.json`。原生通道编入 **10 个 skill 类 plugin**；
-`ios-dev-rules`（规则类）与 `ios-blocked-words-hook`（hook 跨 plugin 依赖）不走原生通道，
-请用方式 3 的 `install.sh` 安装。
+`<plugin>/.codex-plugin/plugin.json`。原生通道编入 **10 个 skill 类 plugin**。
+`ios-dev-rules`（规则类）与 `ios-blocked-words-hook`（hook 跨 plugin 依赖 check 脚本）
+不编入原生 catalog，请用方式 3 的 `install.sh` 安装 —— install.sh 会把禁止词检查 hook
+**同时装到 Claude（`Edit`/`Write`）与 Codex（`apply_patch`）两端**，Codex 端通过解析
+apply_patch 补丁定位受影响的 iOS 源码文件后检查。
 
 ### 方式 3：手动安装
 
@@ -124,6 +126,7 @@ cd Skills
 ./install.sh wk-gh-pr-review-fix
 ./install.sh wk-xcodebuild
 ./install.sh ios-dev-rules
+```
 
 ## 使用
 
