@@ -15,7 +15,7 @@
 BEGIN {
     WMAX   = (WMAX   == "" ? 30  : WMAX)
     MAXBODY= (MAXBODY== "" ? 240 : MAXBODY)
-    nerr=0; nwarn=0; nwuniq=0; ntestfail=0; nlink=0; nsign=0
+    nerr=0; nwarn=0; nwuniq=0; ntestfail=0; nlink=0; nsign=0; nldwarn=0; nldwsig=0
     result=""; result_failed=0
     infail=0; inlink=0; infailtests=0
     linecount=0; bodycap=0
@@ -53,7 +53,11 @@ infailtests==1 {
     infailtests=0                                       # 非缩进行 → 结束块，下沉给后续规则
 }
 
-# ---- 单行链接 / 签名 / 命令失败 ----
+# ---- 链接告警（按签名分组，避免成百上千条近似行刷屏）----
+# 必须在通用 `ld:` 规则之前，先把 `ld: warning:` 归到分组路径。
+/(^|: )ld: warning: /  { collect_ldwarn($0); next }
+
+# ---- 单行链接错误 / 签名 / 命令失败 ----
 /(^|: )ld: /                           { collect_link($0); next }
 /clang: error: linker command failed/  { collect_link($0); next }
 /Code Sign(ing)? error|No signing certificate|requires a development team|No profiles for|Provisioning profile .*(expired|doesn't include|does not|not found)/ {
@@ -95,6 +99,17 @@ function collect_link(s,   k) {
     if (seen[k]++) return
     nlink++; bstore["linkbuf" SUBSEP (++nlinkbuf)]=s
 }
+# 链接告警分组：把可变部分（[数字] / (内容) / 数字串）归一成签名后按签名聚合，
+# 每签名只展示首个真实样例 + 出现次数，避免 N 百条近似 ld warning 刷屏。
+function collect_ldwarn(s,   sig) {
+    nldwarn++
+    sig = s
+    gsub(/\[[0-9]+\]/, "[N]", sig)
+    gsub(/\([^()]*\)/, "(…)", sig)
+    gsub(/[0-9]+/, "#", sig)
+    if (!(sig in ldwseen)) { ldworder[++nldwsig]=sig; ldwexample[sig]=s }
+    ldwseen[sig]++
+}
 function collect_sign(s,   k) {
     k="S:" s
     if (seen[k]++) return
@@ -118,8 +133,8 @@ END {
 
     printf("=== xcodebuild summary ===\n")
     printf("result : %s\n", result)
-    printf("counts : errors=%d  warnings=%d(unique=%d)  linker=%d  signing=%d  test_failures=%d\n",
-           nerr, nwarn, nwuniq, nlink, nsign, ntestfail)
+    printf("counts : errors=%d  warnings=%d(unique=%d)  linker=%d  signing=%d  test_failures=%d  ld_warnings=%d(grouped=%d)\n",
+           nerr, nwarn, nwuniq, nlink, nsign, ntestfail, nldwarn, nldwsig)
 
     printed=0
     printed += render_sum()
@@ -128,6 +143,7 @@ END {
     printed += render_bucket("signbuf", nsignbuf, "-- code signing --")
     printed += render_bucket("tfbuf",   ntfbuf,   "-- test failures --")
     printed += render_body()
+    printed += render_ldwarn()
     printed += render_bucket("warnbuf", nwarnbuf,
                  sprintf("-- warnings (unique, showing %d of %d) --",
                          (nwuniq<WMAX?nwuniq:WMAX), nwuniq))
@@ -142,6 +158,16 @@ function render_sum(   i) {
     if (nsumbuf+0==0) return 0
     printf("\n-- test summary --\n")
     for (i=1;i<=nsumbuf;i++) print bstore["sumbuf" SUBSEP i]
+    return 1
+}
+function render_ldwarn(   i, sig) {
+    if (nldwsig+0==0) return 0
+    printf("\n-- linker warnings (grouped, %d 类 / 共 %d 条) --\n", nldwsig, nldwarn)
+    for (i=1;i<=nldwsig;i++) {
+        if (linecount>=MAXBODY) { bodycap=1; return 1 }
+        sig=ldworder[i]
+        printf("%5d×  %s\n", ldwseen[sig], ldwexample[sig]); linecount++
+    }
     return 1
 }
 function render_bucket(name, n, header,   i) {
