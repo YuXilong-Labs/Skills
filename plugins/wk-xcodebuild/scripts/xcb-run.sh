@@ -38,6 +38,25 @@ SUMMARIZE_AWK="$SCRIPT_DIR/xcb-summarize.awk"
 
 err() { printf '%s\n' "$*" >&2; }
 
+# ---- token 收益统计 ----
+# 每次 build/test 记录"原始输出 vs 精简摘要"的估算 token（chars/4），落 JSONL，
+# 供 xcb-stats.sh（xcb-gain）汇总。WK_XCB_NOSTATS=1 关闭；WK_XCB_STATS_DIR 改目录。
+STATS_DIR="${WK_XCB_STATS_DIR:-$HOME/.cache/wk-xcodebuild}"
+STATS_FILE="$STATS_DIR/stats.jsonl"
+
+record_stats() { # action result raw_tok sum_tok saved pct
+    [ "${WK_XCB_NOSTATS:-0}" = "1" ] && return 0
+    mkdir -p "$STATS_DIR" 2>/dev/null || return 0
+    printf '{"ts":"%s","action":"%s","result":"%s","raw_tokens":%s,"summary_tokens":%s,"saved_tokens":%s,"reduction":%s}\n' \
+        "$(date +%Y-%m-%dT%H:%M:%S)" "$1" "$2" "$3" "$4" "$5" "$6" >> "$STATS_FILE" 2>/dev/null || true
+}
+
+# 累计已省 token（含本次，record 之后调用）
+cumulative_saved() {
+    [ -f "$STATS_FILE" ] || { printf '0'; return; }
+    awk -F'"saved_tokens":' '{n=$2; gsub(/[^0-9].*/,"",n); s+=n} END{printf "%d", s+0}' "$STATS_FILE" 2>/dev/null || printf '0'
+}
+
 if [ "$#" -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     err "用法: xcb-run.sh <xcodebuild 参数...>"
     err "示例: xcb-run.sh build -scheme App -workspace App.xcworkspace"
@@ -49,12 +68,13 @@ command -v xcodebuild >/dev/null 2>&1 || { err "未找到 xcodebuild（需安装
 # ---- 判定是否需要 destination / 是否需要精简 ----
 has_destination=0
 action_needs_dest=0
+action_verb="build"
 for a in "$@"; do
     case "$a" in
         -destination) has_destination=1 ;;
         -destination=*) has_destination=1 ;;
         build|test|build-for-testing|test-without-building|analyze|archive|install)
-            action_needs_dest=1 ;;
+            action_needs_dest=1; action_verb="$a" ;;
     esac
 done
 
@@ -71,7 +91,7 @@ fi
 
 if [ "$choose_dest" -eq 1 ]; then
     if [ ! -x "$DEVICES_SH" ]; then
-        err "缺少 $DEVICES_SH，回退 platform=macOS"
+        err "缺少 ${DEVICES_SH}，回退 platform=macOS"
         DEST="platform=macOS"
     else
         devjson="$("$DEVICES_SH" 2>/dev/null)"
@@ -111,12 +131,26 @@ fi
 
 # ---- 是否需要精简：build/test 类才精简；信息类（-list/-version 等）直出 ----
 if [ "$action_needs_dest" -eq 1 ] || [ "$has_destination" -eq 1 ]; then
-    awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -f "$SUMMARIZE_AWK" "$RAW"
-    printf '\n----\nexit code : %s\nraw log   : %s\n' "$rc" "$RAW"
+    summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -f "$SUMMARIZE_AWK" "$RAW")"
+    printf '%s\n' "$summary"
+
+    # token 收益（chars/4 估算）
+    raw_chars=$(wc -c < "$RAW" 2>/dev/null | tr -d ' '); raw_chars=${raw_chars:-0}
+    sum_chars=${#summary}
+    raw_tok=$(( raw_chars / 4 )); sum_tok=$(( sum_chars / 4 ))
+    saved=$(( raw_tok - sum_tok )); [ "$saved" -lt 0 ] && saved=0
+    if [ "$raw_tok" -gt 0 ]; then pct=$(( saved * 100 / raw_tok )); else pct=0; fi
+    [ "$rc" -eq 0 ] && res="success" || res="fail"
+    record_stats "$action_verb" "$res" "$raw_tok" "$sum_tok" "$saved" "$pct"
+
+    printf '\n----\nexit code : %s\n' "$rc"
+    printf 'token     : 原始 ~%s → 摘要 ~%s，本次省 ~%s (%s%%)，累计省 ~%s\n' \
+        "$raw_tok" "$sum_tok" "$saved" "$pct" "$(cumulative_saved)"
+    printf 'raw log   : %s\n' "$RAW"
     [ "${WK_XCB_PRETTY:-0}" = "1" ] && [ -f "${RAW%.log}.pretty.log" ] && \
         printf 'pretty log: %s\n' "${RAW%.log}.pretty.log"
 else
-    # 信息类命令：原样输出（通常很短且有用）
+    # 信息类命令：原样输出（通常很短且有用），不计入统计
     cat "$RAW"
     printf '\n----\nexit code : %s\nraw log   : %s\n' "$rc" "$RAW"
 fi

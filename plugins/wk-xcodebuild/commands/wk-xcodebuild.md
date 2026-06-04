@@ -68,5 +68,10 @@ WK_XCB_DEST="id=<UDID>" /wk-xcodebuild build -scheme App -workspace App.xcworksp
 - `WK_XCB_DEST` — 强制 destination（`id=<UDID>` 或 `platform=macOS`）
 - `WK_XCB_BYPASS=1` — 让 Hook 放行裸 xcodebuild
 - `WK_XCB_PRETTY=1` — 额外生成 xcbeautify 美化日志（需装 xcbeautify）
+- `WK_XCB_NOSTATS=1` — 关闭 token 收益统计
+
+## token 收益统计
+
+每次运行页脚显示本次/累计节省 token；`xcb-gain` 查看汇总（`xcb-gain --history` 看明细）。
 
 $ARGUMENTS

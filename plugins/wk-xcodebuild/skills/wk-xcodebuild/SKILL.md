@@ -111,6 +111,28 @@ raw log   : /tmp/wk-xcodebuild/xcb-...log
 | `WK_XCB_PRETTY=1` | 若装有 xcbeautify，额外生成 `*.pretty.log` 人类可读日志（不进 stdout） |
 | `WK_XCB_WMAX` | warning 去重后最多展示条数（默认 30） |
 | `WK_XCB_MAXBODY` | 摘要正文行数上限（默认 240） |
+| `WK_XCB_NOSTATS=1` | 关闭 token 收益统计记录 |
+| `WK_XCB_STATS_DIR` | 统计数据目录（默认 `~/.cache/wk-xcodebuild`） |
+
+---
+
+## token 收益统计
+
+每次 build/test 运行后，包装器在页脚输出本次与累计节省的 token（`chars/4` 估算）：
+
+```
+token     : 原始 ~259102 → 摘要 ~672，本次省 ~258430 (99%)，累计省 ~396105
+```
+
+并把记录追加到 `~/.cache/wk-xcodebuild/stats.jsonl`。用 `xcb-gain` 查看累计收益：
+
+```bash
+xcb-gain              # 汇总：运行次数、原始/精简/累计节省 token、平均削减
+xcb-gain --history    # 汇总 + 最近 N 次明细
+xcb-gain --reset      # 清空统计
+```
+
+`WK_XCB_NOSTATS=1` 可关闭记录。
 
 ---
 

@@ -30,6 +30,24 @@ xcodebuild 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目�
 
 > 完整原始日志始终落盘（`raw log` 路径），需要细节时按需 grep，不重复填充上下文。
 
+### 实时统计（xcb-gain）
+
+每次运行会在页脚显示本次与累计节省，并记录到 `~/.cache/wk-xcodebuild/stats.jsonl`：
+
+```
+token     : 原始 ~259102 → 摘要 ~672，本次省 ~258430 (99%)，累计省 ~396105
+```
+
+用 `xcb-gain` 查看累计收益（类似 `rtk gain`）：
+
+```bash
+xcb-gain              # 运行次数、原始/精简/累计节省 token、平均削减
+xcb-gain --history    # 汇总 + 最近 N 次明细
+xcb-gain --reset      # 清空统计
+```
+
+`WK_XCB_NOSTATS=1` 关闭记录；`WK_XCB_STATS_DIR` 改数据目录。token 为 `chars/4` 估算。
+
 ## 组成
 
 | 文件 | 作用 |
@@ -38,7 +56,8 @@ xcodebuild 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目�
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
 | `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
 | `scripts/xcb-guard.sh` | PreToolUse 守卫：拦截裸 xcodebuild |
-| `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`，install.sh 据此软链命令到 PATH |
+| `scripts/xcb-stats.sh` | token 收益统计查看器（`xcb-gain`） |
+| `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`、`xcb-gain=xcb-stats.sh`，install.sh 据此软链命令到 PATH |
 | `hooks/hooks.json` | 原生 plugin hook（`${PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_ROOT}`） |
 | `hooks/settings-snippet.json` | install.sh → Claude 的 PreToolUse 合并片段 |
 | `hooks/codex-settings-snippet.json` | install.sh → Codex 的 PreToolUse 合并片段 |
