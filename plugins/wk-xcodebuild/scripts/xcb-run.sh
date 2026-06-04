@@ -3,9 +3,13 @@
 # Created by yuxilong on 2026/06/03
 #
 # 用法：
-#   xcb-run.sh <xcodebuild 的所有参数>
+#   xcb-run.sh <xcodebuild 的所有参数>            # 默认 xcodebuild
+#   xcb-run.sh swift <swift 的所有参数>           # 首参 swift → 跑 SwiftPM
 #   例：xcb-run.sh build -scheme App -workspace App.xcworkspace
 #       xcb-run.sh test  -scheme App -project App.xcodeproj
+#       xcb-run.sh swift build -c release
+#       xcb-run.sh swift test --filter MyTests
+#   注：swift（SwiftPM）本机构建，不做真机选择；仅精简输出 + 统计。
 #
 # 行为：
 #   1) 若参数未含 -destination 且是 build/test 类操作：
@@ -63,20 +67,35 @@ if [ "$#" -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     [ "$#" -eq 0 ] && exit 64 || exit 0
 fi
 
-command -v xcodebuild >/dev/null 2>&1 || { err "未找到 xcodebuild（需安装 Xcode 命令行工具）"; exit 64; }
+# ---- 工具分发：默认 xcodebuild；首参为 swift 则跑 SwiftPM（swift build/test）----
+TOOL="xcodebuild"
+if [ "${1:-}" = "swift" ]; then
+    TOOL="swift"; shift
+fi
+command -v "$TOOL" >/dev/null 2>&1 || { err "未找到 ${TOOL}（xcodebuild 需 Xcode 命令行工具；swift 需 Swift 工具链）"; exit 64; }
 
 # ---- 判定是否需要 destination / 是否需要精简 ----
+# xcodebuild：build/test 类需选目标设备并精简；swift：本机构建无需设备，build/test 仅精简。
 has_destination=0
 action_needs_dest=0
+needs_summarize=0
 action_verb="build"
-for a in "$@"; do
-    case "$a" in
-        -destination) has_destination=1 ;;
-        -destination=*) has_destination=1 ;;
-        build|test|build-for-testing|test-without-building|analyze|archive|install)
-            action_needs_dest=1; action_verb="$a" ;;
-    esac
-done
+if [ "$TOOL" = "swift" ]; then
+    for a in "$@"; do
+        case "$a" in
+            build|test) needs_summarize=1; action_verb="$a" ;;
+        esac
+    done
+else
+    for a in "$@"; do
+        case "$a" in
+            -destination) has_destination=1 ;;
+            -destination=*) has_destination=1 ;;
+            build|test|build-for-testing|test-without-building|analyze|archive|install)
+                action_needs_dest=1; needs_summarize=1; action_verb="$a" ;;
+        esac
+    done
+fi
 
 # ---- 选择目标设备 ----
 DEST=""
@@ -116,11 +135,11 @@ RAW="$LOG_DIR/xcb-$(date +%Y%m%d-%H%M%S)-$$.log"
 # ---- 组装并运行 ----
 set -- "$@"
 if [ -n "$DEST" ]; then
-    err "▸ xcodebuild target: -destination '$DEST'"
-    xcodebuild "$@" -destination "$DEST" > "$RAW" 2>&1
+    err "▸ ${TOOL} target: -destination '$DEST'"
+    "$TOOL" "$@" -destination "$DEST" > "$RAW" 2>&1
     rc=$?
 else
-    xcodebuild "$@" > "$RAW" 2>&1
+    "$TOOL" "$@" > "$RAW" 2>&1
     rc=$?
 fi
 
@@ -130,8 +149,8 @@ if [ "${WK_XCB_PRETTY:-0}" = "1" ] && command -v xcbeautify >/dev/null 2>&1; the
 fi
 
 # ---- 是否需要精简：build/test 类才精简；信息类（-list/-version 等）直出 ----
-if [ "$action_needs_dest" -eq 1 ] || [ "$has_destination" -eq 1 ]; then
-    summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -f "$SUMMARIZE_AWK" "$RAW")"
+if [ "$needs_summarize" -eq 1 ]; then
+    summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -v TOOL="$TOOL" -f "$SUMMARIZE_AWK" "$RAW")"
     printf '%s\n' "$summary"
 
     # token 收益（chars/4 估算）

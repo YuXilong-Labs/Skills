@@ -47,46 +47,54 @@ case "$command_str" in
     *WK_XCB_BYPASS*|*xcb-run.sh*|*wk-xcodebuild*) exit 0 ;;
 esac
 
-# 词边界匹配裸 xcodebuild（含 /usr/bin/xcodebuild 这类绝对路径调用）。
-# 前置边界允许 / . - 等路径分隔符，仅排除 alnum/_（避免 myxcodebuild 之类误判）。
+# 计算改写后的命令：裸 xcodebuild 或 swift build/test → 改写为走包装器。
+# 前置边界允许 / . - 等路径分隔符（含 /usr/bin/xcodebuild、./swift 这类）。
+# sed 仅含 sentinel（不把 WRAPPER 注入正则，避免路径特殊字符/空格破坏 sed），
+# 再用 bash 字面量替换 sentinel → "$WRAPPER"（路径可能含空格，故带引号）。
+sentinel="@@WK_XCB_WRAPPER@@"
+rewritten=""; kind=""
+
 if printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])xcodebuild([^[:alnum:]_]|$)'; then
-    # 静默改写：把 (路径/)?xcodebuild 可执行 token 替换成包装器，allow + updatedInput。
-    # sed 仅含 sentinel（不把 WRAPPER 注入正则，避免路径中特殊字符破坏 sed），
-    # 再用 bash 字面量替换 sentinel → "$WRAPPER"（包装器路径可能含空格，故带引号）。
-    sentinel="@@WK_XCB_WRAPPER@@"
+    kind="xcodebuild"
+    # 把 (路径/)?xcodebuild 整个可执行 token 换成包装器（包装器默认即跑 xcodebuild）
     rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])([^[:space:];&|()]*/)?xcodebuild([[:space:]]|\$)#\1${sentinel}\3#")"
-    new_cmd="${rewritten/${sentinel}/\"$WRAPPER\"}"
+elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])swift[[:space:]]+(build|test)([[:space:]]|$)'; then
+    kind="swift"
+    # 在 (路径/)?swift 前插入包装器并保留 swift：swift build … → <wrapper> swift build …
+    rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])([^[:space:];&|()]*/)?swift([[:space:]]+(build|test)([[:space:]]|\$))#\1${sentinel} swift\3#")"
+else
+    exit 0   # 既非 xcodebuild 也非 swift build/test → 放行
+fi
 
-    # 改写成功（sentinel 被替换）且有 jq → allow + updatedInput（Claude / Codex 通用）
-    if command -v jq >/dev/null 2>&1 && [ "$new_cmd" != "$rewritten" ]; then
-        jq -nc --arg c "$new_cmd" '{
-            hookSpecificOutput: {
-                hookEventName: "PreToolUse",
-                permissionDecision: "allow",
-                permissionDecisionReason: "已自动改用 wk-xcodebuild 包装器（自动选真机 + 精简输出，省 token）",
-                updatedInput: { command: $c }
-            }
-        }'
-        exit 0
-    fi
+new_cmd="${rewritten/${sentinel}/\"$WRAPPER\"}"
 
-    # 改写失败 / 无 jq → 回退 deny（绝不让裸 xcodebuild 静默跑掉）
-    reason="检测到裸 xcodebuild 调用，且自动改写失败。请改用包装器：
-  \"$WRAPPER\" <相同的 xcodebuild 参数>
-如确需直接运行原始 xcodebuild，可加前缀 WK_XCB_BYPASS=1。"
-    if command -v jq >/dev/null 2>&1; then
-        jq -nc --arg r "$reason" '{
-            hookSpecificOutput: {
-                hookEventName: "PreToolUse",
-                permissionDecision: "deny",
-                permissionDecisionReason: $r
-            }
-        }'
-    else
-        printf '%s\n' "$reason" >&2
-        exit 2
-    fi
+# 改写成功（sentinel 被替换）且有 jq → allow + updatedInput（Claude / Codex 通用）
+if command -v jq >/dev/null 2>&1 && [ "$new_cmd" != "$rewritten" ]; then
+    jq -nc --arg c "$new_cmd" '{
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "allow",
+            permissionDecisionReason: "已自动改用 wk-xcodebuild 包装器（xcodebuild 选真机 / swift 本机构建 + 精简输出，省 token）",
+            updatedInput: { command: $c }
+        }
+    }'
     exit 0
 fi
 
+# 改写失败 / 无 jq → 回退 deny（绝不让裸命令静默跑掉）
+reason="检测到裸 ${kind} 调用，且自动改写失败。请改用包装器：
+  \"$WRAPPER\" <参数>            （swift 用：\"$WRAPPER\" swift <参数>）
+如确需直接运行，可加前缀 WK_XCB_BYPASS=1。"
+if command -v jq >/dev/null 2>&1; then
+    jq -nc --arg r "$reason" '{
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: $r
+        }
+    }'
+else
+    printf '%s\n' "$reason" >&2
+    exit 2
+fi
 exit 0

@@ -16,7 +16,7 @@
 | `wk-lark-wiki-batch` | 批量生成 main 分支基础组件 API 文档，默认 Haiku 深度润色并上传飞书 Wiki | 批量（固定流程） | 无 |
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 — 根因定位、稳定复现、修复落地、回归验证 | 端到端流程（5步） | 无 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 — 拉取未解决 review、修复、本地验证、推送并回复解决 | `inspect` `fix-all` `reply-only` | 无 |
-| `wk-xcodebuild` | xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出（真实工程实测省 ~99.7% token） | 透传 xcodebuild 参数 | 无 |
+| `wk-xcodebuild` | xcodebuild / swift(SwiftPM) 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简 `build`/`test` 输出（真实工程实测省 ~99.7% token） | 透传 xcodebuild / `swift build`·`swift test` 参数 | 无 |
 
 ## Rules（编码规范）
 
@@ -29,7 +29,7 @@
 | Hook | 类型 | 触发时机 | 描述 |
 |------|------|----------|------|
 | `ios-blocked-words-hook` | `PostToolUse` | Claude：`Edit`/`Write` 后；Codex：`apply_patch` 后 | 自动触发禁止关键词检查（**双端**），非阻塞，发现违规时注入警告并禁止 git commit |
-| `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 前 | **静默改写**为 `xcb-run.sh` 包装器（`allow`+`updatedInput`，无需 agent 重试，自动选真机 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
+| `wk-xcodebuild`（内置） | `PreToolUse` | `Bash` 执行裸 `xcodebuild` 或 `swift build`/`swift test` 前 | **静默改写**为 `xcb-run.sh` 包装器（`allow`+`updatedInput`，无需 agent 重试，xcodebuild 选真机 / swift 本机构建 + 精简输出）；`WK_XCB_BYPASS=1` 可逃生 |
 
 ## Commands（斜杠命令）
 

@@ -1,15 +1,16 @@
 ---
 name: wk-xcodebuild
 description: |
-  iOS/macOS 工程编译与测试的 xcodebuild 智能包装工作流。
-  当需要执行 xcodebuild 编译（build）、测试（test/build-for-testing）、
-  归档（archive）或分析（analyze）时使用本 Skill，而非直接运行裸 xcodebuild。
-  自动检测本机 USB 连接的真机并设为编译/测试目标（找不到真机时回退 My Mac），
-  并参考 rtk 的处理方式对 xcodebuild 的海量输出做精简，只把关键信息
+  iOS/macOS 工程编译与测试的 xcodebuild / swift(SwiftPM) 智能包装工作流。
+  当需要执行 xcodebuild 编译（build）、测试（test/build-for-testing）、归档（archive）、
+  分析（analyze），或 swift build / swift test（Swift Package Manager）时使用本 Skill，
+  而非直接运行裸 xcodebuild / swift build/test。
+  xcodebuild 路径会自动检测本机 USB 真机并设为目标（无真机回退 My Mac）；
+  swift 路径为本机构建、不选设备。两者都参考 rtk 的方式精简海量输出，只把关键信息
   （结果、error、链接/签名错误、测试失败用例、warning 去重计数）返回给 agent，
   完整日志落盘，显著减少上下文填充、节省 token。
-  TRIGGER：用户要求编译/构建/跑测试/build/test/run on device/真机调试，
-  或 agent 准备调用 xcodebuild 时。
+  TRIGGER：用户要求编译/构建/跑测试/build/test/run on device/真机调试/swift build/swift test，
+  或 agent 准备调用 xcodebuild 或 swift build/test 时。
 ---
 
 # WK-Xcodebuild — xcodebuild 智能包装 Skill
@@ -52,6 +53,10 @@ install.sh 还会把 `xcb` 命令软链到 PATH（优先 `~/.local/bin`），即
 # 短命令 xcb（install.sh 已软链到 PATH，终端手动调用更顺手）
 xcb build -scheme App -workspace App.xcworkspace
 xcb test  -scheme App -project App.xcodeproj
+
+# Swift Package Manager：首参 swift → 跑 SwiftPM（本机构建，不选真机）
+xcb swift build -c release
+xcb swift test --filter MyTests
 ```
 
 > `xcb` 由 install.sh 软链到 PATH 可写目录（优先 `~/.local/bin`）。若 `command -v xcb`

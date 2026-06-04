@@ -37,6 +37,15 @@ skill_file: skills/wk-xcodebuild/SKILL.md
 /wk-xcodebuild test -scheme App -project App.xcodeproj
 ```
 
+### Swift Package Manager（swift build/test）
+
+```
+/wk-xcodebuild swift build -c release
+/wk-xcodebuild swift test --filter MyTests
+```
+
+> 首参 `swift` 走 SwiftPM 本机构建，不做真机选择，只精简输出 + 统计。
+
 ### 指定真机（跳过自动选择）
 
 ```

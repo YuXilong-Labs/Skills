@@ -28,6 +28,9 @@ BEGIN {
     if (line ~ /FAILED/) result_failed=1
     next
 }
+# SwiftPM 成功标记（无 ** ** marker）：记标志，END 据有无失败定结果
+/Build complete!/ { swiftok=1; next }
+
 # ---- "The following build commands failed:" 块 ----
 /^The following build commands failed:/ { infail=1; addbody("-- build commands failed --"); next }
 infail==1 {
@@ -126,9 +129,14 @@ function addbody(s) { bodyorder[++nbody]=s }
 
 END {
     if (result=="" && (nerr>0 || nlink>0 || nsign>0 || ntestfail>0)) {
-        result="(no explicit result marker — see errors below)"; result_failed=1
+        result = (TOOL=="swift" ? "SwiftPM 失败（见下方 errors / test failures）" \
+                                : "(no explicit result marker — see errors below)")
+        result_failed=1
+    } else if (result=="" && swiftok==1) {
+        result="Build complete! (SwiftPM)"
     } else if (result=="") {
-        result="(unknown — no BUILD/TEST marker found)"
+        result = (TOOL=="swift" ? "(SwiftPM：无 Build complete! 标记，见 exit code)" \
+                                : "(unknown — no BUILD/TEST marker found)")
     }
 
     printf("=== xcodebuild summary ===\n")

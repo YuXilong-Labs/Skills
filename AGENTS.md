@@ -72,7 +72,7 @@ install.sh 会把 hook snippet upsert 进 `~/.codex/hooks.json`（PreToolUse/Pos
 | `wk-crash-repro-fix` | iOS Crash 闭环排查 |
 | `wk-gh-pr-review-fix` | GitHub PR review 闭环处理 |
 | `ios-blocked-words-check` | App Store 审核禁止关键词检查 |
-| `wk-xcodebuild` | xcodebuild 智能包装（自动选真机 + 精简输出 + PreToolUse 静默改写） |
+| `wk-xcodebuild` | xcodebuild / swift(SwiftPM) 智能包装（自动选真机 + 精简 build/test 输出 + PreToolUse 静默改写） |
 
 ## 约定
 

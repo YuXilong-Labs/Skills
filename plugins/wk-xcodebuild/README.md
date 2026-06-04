@@ -1,6 +1,7 @@
 # wk-xcodebuild
 
-xcodebuild 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目标、rtk 风格精简输出，省 token。
+xcodebuild / swift(SwiftPM) 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目标、
+rtk 风格精简输出，省 token。覆盖 `xcodebuild build/test` 与 `swift build/test`。
 同时兼容 **Claude Code** 与 **Codex CLI**。
 
 ## 能力
@@ -90,6 +91,10 @@ xcb test  -scheme App -project App.xcodeproj
 
 # 等价的完整路径（任意 shell 都可用）
 ~/.claude/scripts/wk-xcodebuild/xcb-run.sh build -scheme App -workspace App.xcworkspace
+
+# Swift Package Manager（首参 swift → 跑 SwiftPM，本机构建不选真机）
+xcb swift build -c release
+xcb swift test --filter MyTests
 
 # 多真机：选定后强制目标
 WK_XCB_DEST="id=<UDID>" xcb build -scheme App ...
