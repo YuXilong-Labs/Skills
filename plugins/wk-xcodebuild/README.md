@@ -57,6 +57,7 @@ xcb-gain --reset      # 清空统计
 | `scripts/xcb-run.sh` | 包装器：选目标 + 跑 xcodebuild + 落盘 + 输出精简摘要 |
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
 | `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
+| `scripts/xcb-test-deps.sh` | 测试前三方依赖预检（Texture<3.2.0 死锁 / MMKV 未初始化），只读 Podfile.lock |
 | `scripts/xcb-guard.sh` | PreToolUse 守卫：裸 xcodebuild 静默改写为 xcb-run.sh（allow + updatedInput） |
 | `scripts/xcb-stats.sh` | token 收益统计查看器（`xcb-gain`） |
 | `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`、`xcb-gain=xcb-stats.sh`，install.sh 据此软链命令到 PATH |
@@ -116,3 +117,13 @@ WK_XCB_BYPASS=1 xcodebuild -version
 | `WK_XCB_PRETTY=1` | 额外生成 xcbeautify `*.pretty.log`（需装 xcbeautify） |
 | `WK_XCB_WMAX` | warning 去重展示上限（默认 30） |
 | `WK_XCB_MAXBODY` | 摘要正文行数上限（默认 240） |
+| `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
+
+## 测试前三方依赖预检
+
+`test` / `build-for-testing` / `swift test` 运行前，包装器只读 `Podfile.lock` 检测会拖垮通过率的三方库，命中即把告警**置顶到摘要**（只读不改工程）：
+
+- **Texture（AsyncDisplayKit）< 3.2.0** — load 时构造函数在主线程建 UIView → `+[UIScreen initialize]` 的 `dispatch_once` 互锁，测试**永久卡死**（[PR #2032](https://github.com/TextureGroup/Texture/pull/2032) 在 3.2.0 修复）。首选在 `cocoapods-publish` 集中替换 Texture 的 source/version；fallback 见 reference 文档。
+- **MMKV** — 使用前必须 `MMKV.initialize()`，否则首次访问 **crash**。需在 `main.mm` 或测试 bundle 启动引导里提前初始化。
+
+详见 `skills/wk-xcodebuild/references/test-third-party-deps.md`。`WK_XCB_NO_TESTDEPS=1` 关闭。

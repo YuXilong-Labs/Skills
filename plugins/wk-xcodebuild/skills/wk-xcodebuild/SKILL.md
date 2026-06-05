@@ -34,7 +34,7 @@ description: |
 | install.sh → Codex | `~/.codex/scripts/wk-xcodebuild/` |
 | 原生 plugin | `<plugin_root>/scripts/` |
 
-核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）。
+核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）、`xcb-test-deps.sh`（测试前三方依赖预检）。
 
 install.sh 还会把 `xcb` 命令软链到 PATH（优先 `~/.local/bin`），即 `xcb` ≡ `xcb-run.sh`。
 
@@ -81,6 +81,21 @@ WK_XCB_DEST="id=00008130-001929D40E8B803A" ~/.claude/scripts/wk-xcodebuild/xcb-r
 
 详见 `references/destination-selection.md`。
 
+### 第 2.5 步：测试前三方依赖预检（仅 test 类动作）
+
+`test` / `build-for-testing` / `test-without-building` / `swift test` 运行前，包装器自动只读
+`Podfile.lock`，检测会拖垮测试通过率的三方库，命中则把告警**置顶到摘要**（不修改用户工程）：
+
+- **Texture（AsyncDisplayKit）< 3.2.0** — load 时构造函数在主线程建 UIView → `+[UIScreen initialize]`
+  的 `dispatch_once` 互锁，测试**永久卡死**（PR #2032 在 3.2.0 修复）。首选在 `cocoapods-publish`
+  里集中替换 Texture 的 source/version；fallback 是 Podfile `post_install` 加
+  `AS_INITIALIZE_FRAMEWORK_MANUALLY=1` + 手动 init。
+- **MMKV** — 使用前必须 `MMKV.initialize()`，否则首次访问 **crash**。需在 `main.mm` 或测试
+  bundle 启动引导（principal class / `+load` / `XCTestObservation`）里提前初始化。
+
+看到告警时：先按指引落补救（改 `cocoapods-publish` / Podfile / 初始化代码），再重跑测试。
+本预检只读不改，`WK_XCB_NO_TESTDEPS=1` 可关闭。详见 `references/test-third-party-deps.md`。
+
 ### 第 3 步：解读精简摘要
 
 stdout 输出结构（详见 `references/output-filtering.md`）：
@@ -119,6 +134,7 @@ raw log   : /tmp/wk-xcodebuild/xcb-...log
 | `WK_XCB_MAXBODY` | 摘要正文行数上限（默认 240） |
 | `WK_XCB_NOSTATS=1` | 关闭 token 收益统计记录 |
 | `WK_XCB_STATS_DIR` | 统计数据目录（默认 `~/.cache/wk-xcodebuild`） |
+| `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
 
 ---
 
@@ -166,3 +182,4 @@ xcrun devicectl（精确区分 USB/WiFi）
 
 - `references/destination-selection.md` — 设备检测细节、多设备处理、destination 取值
 - `references/output-filtering.md` — 精简规则（保留/剥离清单）、摘要格式、token 收益
+- `references/test-third-party-deps.md` — 测试前三方依赖预检（Texture 死锁 / MMKV 初始化）根因与修复

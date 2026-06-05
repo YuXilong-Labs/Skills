@@ -39,6 +39,7 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 DEVICES_SH="$SCRIPT_DIR/xcb-devices.sh"
 SUMMARIZE_AWK="$SCRIPT_DIR/xcb-summarize.awk"
+TESTDEPS_SH="$SCRIPT_DIR/xcb-test-deps.sh"
 
 err() { printf '%s\n' "$*" >&2; }
 
@@ -79,11 +80,13 @@ command -v "$TOOL" >/dev/null 2>&1 || { err "未找到 ${TOOL}（xcodebuild 需 
 has_destination=0
 action_needs_dest=0
 needs_summarize=0
+is_test_action=0
 action_verb="build"
 if [ "$TOOL" = "swift" ]; then
     for a in "$@"; do
         case "$a" in
-            build|test) needs_summarize=1; action_verb="$a" ;;
+            build) needs_summarize=1; action_verb="$a" ;;
+            test) needs_summarize=1; is_test_action=1; action_verb="$a" ;;
         esac
     done
 else
@@ -91,8 +94,10 @@ else
         case "$a" in
             -destination) has_destination=1 ;;
             -destination=*) has_destination=1 ;;
-            build|test|build-for-testing|test-without-building|analyze|archive|install)
+            build|analyze|archive|install)
                 action_needs_dest=1; needs_summarize=1; action_verb="$a" ;;
+            test|build-for-testing|test-without-building)
+                action_needs_dest=1; needs_summarize=1; is_test_action=1; action_verb="$a" ;;
         esac
     done
 fi
@@ -127,6 +132,24 @@ if [ "$choose_dest" -eq 1 ]; then
     fi
 fi
 
+# ---- 测试前三方依赖预检（Texture/MMKV 致测试卡死/崩溃）----
+# 仅 test 类动作触发；只读 Podfile.lock，命中则把告警注入摘要顶部（agent 可见），不改工程。
+# WK_XCB_NO_TESTDEPS=1 关闭。
+PREFLIGHT=""
+if [ "$is_test_action" -eq 1 ] && [ "${WK_XCB_NO_TESTDEPS:-0}" != "1" ] && [ -x "$TESTDEPS_SH" ]; then
+    # 搜索起点：-workspace/-project 所在目录 + 当前目录（脚本自身再向上回溯）
+    ws_dir=""
+    prev=""
+    for a in "$@"; do
+        case "$prev" in
+            -workspace|-project) ws_dir="$(cd "$(dirname "$a")" 2>/dev/null && pwd)" ;;
+        esac
+        prev="$a"
+    done
+    PREFLIGHT="$("$TESTDEPS_SH" ${ws_dir:+"$ws_dir"} "$PWD" 2>/dev/null)"
+    [ -n "$PREFLIGHT" ] && printf '%s\n' "$PREFLIGHT" >&2
+fi
+
 # ---- 原始日志落盘 ----
 LOG_DIR="${TMPDIR:-/tmp}/wk-xcodebuild"
 mkdir -p "$LOG_DIR"
@@ -151,6 +174,8 @@ fi
 # ---- 是否需要精简：build/test 类才精简；信息类（-list/-version 等）直出 ----
 if [ "$needs_summarize" -eq 1 ]; then
     summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -v TOOL="$TOOL" -f "$SUMMARIZE_AWK" "$RAW")"
+    # 测试预检告警置顶（含 Texture/MMKV 时），确保 agent 在摘要里第一眼看到
+    [ -n "$PREFLIGHT" ] && printf '%s\n\n' "$PREFLIGHT"
     printf '%s\n' "$summary"
 
     # token 收益（chars/4 估算）
