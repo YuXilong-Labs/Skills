@@ -1,0 +1,9 @@
+{
+  "name": "wk-instinct",
+  "version": "1.0.0",
+  "description": "会话学习系统 — 从对话中提取可复用模式，保存为原子 instinct，逐步演化为正式 Skill",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

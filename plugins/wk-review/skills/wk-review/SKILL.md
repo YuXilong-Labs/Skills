@@ -306,6 +306,20 @@ git show <hash> --no-color
 
 ---
 
+## 通用审查维度
+
+iOS 特定维度之外，补充以下通用视角（适用于架构性改动或跨平台代码）：
+
+> 详见 [general-review-dimensions.md](references/general-review-dimensions.md)
+
+快速检查：
+- 实现是否与需求/设计文档对齐？
+- 架构决策是否合理，是否引入安全隐患？
+- 测试是否验证真实行为（不只是 mock）？
+- 是否考虑了向后兼容性？
+
+---
+
 ## 输出格式
 
 报告使用 Markdown 格式，详见 [output-format.md](references/output-format.md)。

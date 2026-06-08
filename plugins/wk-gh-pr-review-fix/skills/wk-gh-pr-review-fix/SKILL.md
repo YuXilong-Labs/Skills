@@ -40,7 +40,7 @@ GitHub PR review 闭环处理 Skill。目标不是“读评论”，而是把 un
 
 - **必须**使用 thread-aware review 数据。顶层 PR review summary 不能代替 review thread 状态。
 - **必须**先判断 comment 是否 actionable，再决定是否改代码。
-- **必须**遵守 `receiving-code-review`：先核实，再实现，不做表演式认同。
+- **必须**遵守 [receiving-code-review](references/receiving-code-review.md)：先核实，再实现，不做表演式认同。
 - **必须**遵守 `test-driven-development`：要改代码时先写失败测试。
 - **必须**遵守 `verification-before-completion`：没有 fresh verification，不得声称已修复。
 - 没有新的 unresolved actionable thread 时，**不得**制造空提交、空推送或冗余回复。
@@ -130,3 +130,4 @@ GitHub PR review 闭环处理 Skill。目标不是“读评论”，而是把 un
 
 - [review-thread-commands.md](references/review-thread-commands.md)
 - [local-verification-checklist.md](references/local-verification-checklist.md)
+- [receiving-code-review.md](references/receiving-code-review.md)

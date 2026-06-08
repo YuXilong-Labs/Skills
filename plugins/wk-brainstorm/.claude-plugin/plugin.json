@@ -1,0 +1,9 @@
+{
+  "name": "wk-brainstorm",
+  "version": "1.0.0",
+  "description": "实现前设计探索 — 需求澄清、方案对比、设计文档输出，防止基于未验证假设开工",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

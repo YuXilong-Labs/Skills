@@ -1,0 +1,22 @@
+{
+  "name": "wk-skill-create",
+  "version": "1.0.0",
+  "description": "Skill 生成工具 — 分析 git 历史提取编码模式，生成符合本仓库规范的 SKILL.md 草稿",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "wk-skill-create",
+    "shortDescription": "Skill 生成工具",
+    "category": "Development",
+    "capabilities": [
+      "Read",
+      "Write",
+      "Bash"
+    ],
+    "brandColor": "#30D158"
+  }
+}

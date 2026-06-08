@@ -124,6 +124,39 @@
         "installation": "AVAILABLE"
       },
       "category": "Development"
+    },
+    {
+      "name": "wk-brainstorm",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-brainstorm"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-instinct",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-instinct"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "wk-skill-create",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-skill-create"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
     }
   ]
 }

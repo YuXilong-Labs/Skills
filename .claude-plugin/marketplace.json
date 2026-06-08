@@ -135,6 +135,36 @@
         "name": "yuxilong",
         "url": "https://github.com/YuXilong-Labs"
       }
+    },
+    {
+      "name": "wk-brainstorm",
+      "description": "实现前设计探索 — 需求澄清、方案对比、设计文档输出，防止基于未验证假设开工",
+      "version": "1.0.0",
+      "source": "./plugins/wk-brainstorm",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
+    },
+    {
+      "name": "wk-instinct",
+      "description": "会话学习系统 — 从对话中提取可复用模式，保存为原子 instinct，逐步演化为正式 Skill",
+      "version": "1.0.0",
+      "source": "./plugins/wk-instinct",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
+    },
+    {
+      "name": "wk-skill-create",
+      "description": "Skill 生成工具 — 分析 git 历史提取编码模式，生成符合本仓库规范的 SKILL.md 草稿",
+      "version": "1.0.0",
+      "source": "./plugins/wk-skill-create",
+      "author": {
+        "name": "yuxilong",
+        "url": "https://github.com/YuXilong-Labs"
+      }
     }
   ]
 }
