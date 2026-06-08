@@ -113,6 +113,17 @@
         "installation": "AVAILABLE"
       },
       "category": "Development"
+    },
+    {
+      "name": "wk-tdd",
+      "source": {
+        "source": "local",
+        "path": "./plugins/wk-tdd"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Development"
     }
   ]
 }

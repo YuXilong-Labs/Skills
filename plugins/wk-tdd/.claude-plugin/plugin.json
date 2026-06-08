@@ -1,0 +1,9 @@
+{
+  "name": "wk-tdd",
+  "version": "1.0.0",
+  "description": "iOS/macOS TDD 工作流引导 — 强制先写测试，RED→GREEN→REFACTOR，覆盖 Swift Testing / XCTest / OCMock，内置覆盖率验证",
+  "author": {
+    "name": "yuxilong",
+    "url": "https://github.com/YuXilong-Labs"
+  }
+}

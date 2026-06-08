@@ -89,6 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/YuXilong-Labs/Skills/main/install.s
 | `wk-crash-repro-fix` | Skill | iOS Crash 闭环排查（根因→复现→修复→回归验证） | 无 |
 | `wk-gh-pr-review-fix` | Skill | GitHub PR review 闭环处理（拉 review→修复→验证→推送→回复并 resolve） | 无 |
 | `wk-xcodebuild` | Skill + Hook | xcodebuild / swift(SwiftPM) 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简 build/test 输出节省 token；PreToolUse 把裸 xcodebuild 与 swift build/test 静默改写为包装器（allow+updatedInput） | 无 |
+| `wk-tdd` | Skill | iOS/macOS TDD 工作流引导（RED→GREEN→REFACTOR），覆盖 Swift Testing / XCTest / OCMock，内置覆盖率验证 | 无 |
 | `ios-blocked-words-check` | Skill | App Store 审核合规禁止关键词检查 | 无 |
 | `ios-blocked-words-hook` | Hook | PostToolUse — Edit/Write iOS 文件后自动触发关键词检查 | 无 |
 | `ios-dev-rules` | Rules | iOS 三语言编码规范（ObjC/Swift/Ruby），安装到 ~/.claude/rules/ | 无 |
