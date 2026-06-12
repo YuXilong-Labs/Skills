@@ -13,8 +13,11 @@ description: |
   （xcresulttool 计数对 XCTest / Swift Testing 统一）；另提供 xcb result（xcresult
   测试结果摘要，替代裸 xcresulttool get test-results）与 xcb cov（覆盖率摘要，
   替代裸 xccov view --report）子命令。
+  CocoaPods 路径（xcb pod …）覆盖 pod install / update / repo update / lib|spec lint，
+  摘要只保留依赖变更、[!] 警告/错误块、lint ERROR/WARN。
   TRIGGER：用户要求编译/构建/跑测试/build/test/run on device/真机调试/swift build/swift test，
-  或要查看测试结果/xcresult/覆盖率，或 agent 准备调用 xcodebuild、swift build/test、
+  或要查看测试结果/xcresult/覆盖率，或要装/更新 Pods（pod install/update），
+  或 agent 准备调用 xcodebuild、swift build/test、pod install/update/lint、
   xcresulttool get test-results、xccov view --report 时。
 ---
 
@@ -39,7 +42,7 @@ description: |
 | install.sh → Codex | `~/.codex/scripts/wk-xcodebuild/` |
 | 原生 plugin | `<plugin_root>/scripts/` |
 
-核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）、`xcb-test-deps.sh`（测试前三方依赖预检）、`xcb-result.sh`（xcresult / 覆盖率结构化摘要）。
+核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（xcodebuild/swift 精简）、`xcb-pod-summarize.awk`（CocoaPods 精简）、`xcb-guard.sh`（hook 守卫）、`xcb-test-deps.sh`（测试前三方依赖预检）、`xcb-result.sh`（xcresult / 覆盖率结构化摘要）。
 
 install.sh 还会把 `xcb` 命令软链到 PATH（优先 `~/.local/bin`），即 `xcb` ≡ `xcb-run.sh`。
 
@@ -62,6 +65,12 @@ xcb test  -scheme App -project App.xcodeproj
 # Swift Package Manager：首参 swift → 跑 SwiftPM（本机构建，不选真机）
 xcb swift build -c release
 xcb swift test --filter MyTests
+
+# CocoaPods：首参 pod → 跑 CocoaPods（install/update/repo update/lib|spec lint 精简，
+# 其余子命令原样直出；bundle exec pod … 的改写同样适用）
+xcb pod install --repo-update
+xcb pod update Alamofire
+xcb pod lib lint MyPod.podspec
 ```
 
 > `xcb` 由 install.sh 软链到 PATH 可写目录（优先 `~/.local/bin`）。若 `command -v xcb`
@@ -141,6 +150,24 @@ xcb cov [--path <bundle.xcresult>]
 多设备时 `result`/`testFailures` 排在 80 行之外会被截掉。
 详见 `references/xcresult-digest.md`。
 
+### 第 5 步：CocoaPods 摘要（xcb pod）
+
+`pod install` / `pod update` / `pod repo update` / `pod lib|spec lint` 经包装器输出：
+
+```
+=== pod summary ===
+result : Pod installation complete! There are 7 dependencies ...
+counts : installed=3 updated=0 removed=1 using=42 warnings=1 errors=0
+
+-- changes (showing 4 of 4) --      ← Installing/Updating/Removing（含 "was X.Y" 版本变化）
+-- warnings / errors --             ← [!] 块（依赖冲突附缩进版本树）、lint ERROR/WARN、Ruby 异常首行
+```
+
+- `using=N` 是未变更 pod 的折叠计数（不逐条刷屏）；变更条目上限 `WK_XCB_CMAX`（默认 40）。
+- 依赖冲突时整个 `[!]` 块连同缩进的版本树保留，可直接据此改 Podfile。
+- Hook 把裸 `pod install|update|repo update|lib lint|spec lint` 静默改写走包装器
+  （`bundle exec pod …` 同样适用）；`pod search`/`pod env` 等信息类不拦截、不精简。
+
 ---
 
 ## 输入参数（透传给 xcodebuild）
@@ -162,6 +189,7 @@ xcb cov [--path <bundle.xcresult>]
 | `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
 | `WK_XCB_NO_XCRESULT=1` | 关闭 test 类动作的 -resultBundlePath 注入与 xcresult 分区 |
 | `WK_XCB_COV_WORST` | `xcb cov` 最差文件展示条数（默认 10） |
+| `WK_XCB_CMAX` | pod 摘要变更条目展示上限（默认 40） |
 
 ---
 

@@ -5,13 +5,17 @@
 # 用法：
 #   xcb-run.sh <xcodebuild 的所有参数>            # 默认 xcodebuild
 #   xcb-run.sh swift <swift 的所有参数>           # 首参 swift → 跑 SwiftPM
+#   xcb-run.sh pod <pod 的所有参数>               # 首参 pod → 跑 CocoaPods
 #   xcb-run.sh result [--tests] [--path <xcresult>]  # xcresult 测试结果摘要（xcb-result.sh）
 #   xcb-run.sh cov    [--path <xcresult>]            # 覆盖率摘要（xcb-result.sh）
 #   例：xcb-run.sh build -scheme App -workspace App.xcworkspace
 #       xcb-run.sh test  -scheme App -project App.xcodeproj
 #       xcb-run.sh swift build -c release
 #       xcb-run.sh swift test --filter MyTests
-#   注：swift（SwiftPM）本机构建，不做真机选择；仅精简输出 + 统计。
+#       xcb-run.sh pod install --repo-update
+#   注：swift（SwiftPM）/ pod 为本机执行，不做真机选择；仅精简输出 + 统计。
+#   pod 仅 install / update / repo update / lib|spec lint 精简（依赖变更 + [!] 块 +
+#   lint ERROR/WARN），其余子命令（search/env 等）原样直出。
 #
 # test 类动作（test / test-without-building）若未显式传 -resultBundlePath，
 # 自动注入落盘路径，并在摘要末尾追加 xcresult 权威分区（xcresulttool 计数对
@@ -45,6 +49,7 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 DEVICES_SH="$SCRIPT_DIR/xcb-devices.sh"
 SUMMARIZE_AWK="$SCRIPT_DIR/xcb-summarize.awk"
+POD_SUMMARIZE_AWK="$SCRIPT_DIR/xcb-pod-summarize.awk"
 TESTDEPS_SH="$SCRIPT_DIR/xcb-test-deps.sh"
 RESULT_SH="$SCRIPT_DIR/xcb-result.sh"
 
@@ -82,12 +87,13 @@ case "${1:-}" in
         exec "$RESULT_SH" "$@" ;;
 esac
 
-# ---- 工具分发：默认 xcodebuild；首参为 swift 则跑 SwiftPM（swift build/test）----
+# ---- 工具分发：默认 xcodebuild；首参 swift → SwiftPM；首参 pod → CocoaPods ----
 TOOL="xcodebuild"
-if [ "${1:-}" = "swift" ]; then
-    TOOL="swift"; shift
-fi
-command -v "$TOOL" >/dev/null 2>&1 || { err "未找到 ${TOOL}（xcodebuild 需 Xcode 命令行工具；swift 需 Swift 工具链）"; exit 64; }
+case "${1:-}" in
+    swift) TOOL="swift"; shift ;;
+    pod)   TOOL="pod"; shift ;;
+esac
+command -v "$TOOL" >/dev/null 2>&1 || { err "未找到 ${TOOL}（xcodebuild 需 Xcode 命令行工具；swift 需 Swift 工具链；pod 需 CocoaPods）"; exit 64; }
 
 # ---- 判定是否需要 destination / 是否需要精简 ----
 # xcodebuild：build/test 类需选目标设备并精简；swift：本机构建无需设备，build/test 仅精简。
@@ -107,6 +113,13 @@ if [ "$TOOL" = "swift" ]; then
             test) needs_summarize=1; is_test_action=1; action_verb="$a" ;;
         esac
     done
+elif [ "$TOOL" = "pod" ]; then
+    # 仅大输出子命令精简；search/env/--version 等信息类原样直出
+    case "${1:-}" in
+        install|update) needs_summarize=1; action_verb="pod-$1" ;;
+        repo) [ "${2:-}" = "update" ] && { needs_summarize=1; action_verb="pod-repo-update"; } ;;
+        lib|spec) [ "${2:-}" = "lint" ] && { needs_summarize=1; action_verb="pod-$1-lint"; } ;;
+    esac
 else
     for a in "$@"; do
         [ "$prev_arg" = "-resultBundlePath" ] && user_xcresult="$a"
@@ -211,7 +224,11 @@ fi
 
 # ---- 是否需要精简：build/test 类才精简；信息类（-list/-version 等）直出 ----
 if [ "$needs_summarize" -eq 1 ]; then
-    summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -v TOOL="$TOOL" -f "$SUMMARIZE_AWK" "$RAW")"
+    if [ "$TOOL" = "pod" ]; then
+        summary="$(awk -v CMAX="${WK_XCB_CMAX:-40}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -f "$POD_SUMMARIZE_AWK" "$RAW")"
+    else
+        summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -v TOOL="$TOOL" -f "$SUMMARIZE_AWK" "$RAW")"
+    fi
 
     # ---- xcresult 权威分区（test 类动作跑完追加）----
     # 子摘要自带页脚（---- 之后），截掉避免双页脚；统计由本脚本统一记一次。

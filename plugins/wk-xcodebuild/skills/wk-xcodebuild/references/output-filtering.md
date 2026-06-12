@@ -74,7 +74,31 @@ pretty log: <可选>
 | `WK_XCB_WMAX` | 30 | warning 去重后展示上限 |
 | `WK_XCB_MAXBODY` | 240 | 摘要正文总行数上限（超出截断并提示） |
 
+## CocoaPods 输出精简（xcb-pod-summarize.awk）
+
+`pod install / update / repo update / lib|spec lint` 走独立精简器（`xcb pod …` 路径）。
+
+**保留**：结果标记（`Pod installation complete!` / `passed validation` / `did not pass`）、
+依赖变更行（`Installing`/`Updating`/`Removing`，含 `was X.Y`，上限 `WK_XCB_CMAX`=40）、
+`[!]` 块（依赖冲突附缩进版本树整块保留）、lint 的 `- ERROR |` / `- WARN |`、
+Ruby 异常首行（`XxxError - …` / `Pod::…`，丢弃 backtrace）。
+
+**剥离**：`Analyzing/Downloading dependencies`、`Generating Pods project`、
+`Integrating client project`、repo update 与 git 噪声、进度行；
+`Using X`（未变更 pod）折叠为 `using=N` 计数不逐条展示。
+
+```
+=== pod summary ===
+result : Pod installation complete! There are 7 dependencies ...
+counts : installed=3 updated=0 removed=1 using=42 warnings=1 errors=0  [lint_errors=N lint_warnings=M]
+
+-- changes (showing X of Y) --
+-- warnings / errors --
+```
+
+`pod search` / `pod env` 等信息类子命令不精简、原样直出（hook 也不拦截）。
+
 ## 退出码透传
 
-`xcb-run.sh` 透传 xcodebuild 退出码（成功 0；编译失败常见 65；用法/参数错误 64/66；
-多真机需用户选择 3）。agent 可据退出码快速判断。
+`xcb-run.sh` 透传 xcodebuild / swift / pod 退出码（成功 0；xcodebuild 编译失败常见 65；
+用法/参数错误 64/66；多真机需用户选择 3）。agent 可据退出码快速判断。

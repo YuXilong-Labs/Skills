@@ -1,7 +1,8 @@
 # wk-xcodebuild
 
-xcodebuild / swift(SwiftPM) 智能包装 Skill + PreToolUse Hook —— 自动选 USB 真机目标、
-rtk 风格精简输出，省 token。覆盖 `xcodebuild build/test` 与 `swift build/test`。
+xcodebuild / swift(SwiftPM) / CocoaPods 智能包装 Skill + PreToolUse Hook —— 自动选
+USB 真机目标、rtk 风格精简输出，省 token。覆盖 `xcodebuild build/test`、
+`swift build/test`、`pod install/update/lint` 与 `xcresulttool`/`xccov` 结果摘要。
 同时兼容 **Claude Code** 与 **Codex CLI**。
 
 ## 能力
@@ -17,6 +18,10 @@ rtk 风格精简输出，省 token。覆盖 `xcodebuild build/test` 与 `swift b
    `xcb result [--tests]` 摘要测试结果（裸 `xcresulttool get test-results tests` 实测
    ~39K token → ~94，省 99%），`xcb cov` 摘要覆盖率（总览 + 各 target + 最差 N 文件）。
    Hook 同时把裸 `xcresulttool get test-results summary|tests` 静默改写为 `xcb result`。
+5. **CocoaPods 摘要** — `xcb pod install/update/repo update/lib|spec lint` 只保留
+   依赖变更（Installing/Updating/Removing，含 `was X.Y`）、`[!]` 警告/错误块
+   （依赖冲突附版本树）、lint ERROR/WARN；未变更 pod 折叠为 `using=N` 计数。
+   Hook 把裸 `pod install` 等静默改写走包装器（`bundle exec pod …` 同样适用）。
 
 ## 实测 token 收益
 
@@ -61,7 +66,8 @@ xcb-gain --reset      # 清空统计
 |---|---|
 | `scripts/xcb-run.sh` | 包装器：选目标 + 跑 xcodebuild + 落盘 + 输出精简摘要 |
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
-| `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
+| `scripts/xcb-summarize.awk` | rtk 风格输出精简 — xcodebuild/swift（BSD-awk 兼容） |
+| `scripts/xcb-pod-summarize.awk` | rtk 风格输出精简 — CocoaPods（依赖变更 + [!] 块 + lint 分级） |
 | `scripts/xcb-test-deps.sh` | 测试前三方依赖预检（Texture<3.2.0 死锁 / MMKV 未初始化），只读 Podfile.lock |
 | `scripts/xcb-result.sh` | xcresult / 覆盖率结构化摘要（`xcb result` / `xcb cov`，jq 解析 xcresulttool/xccov JSON） |
 | `scripts/xcb-guard.sh` | PreToolUse 守卫：裸 xcodebuild / swift build/test / xcresulttool get test-results 静默改写为包装器（allow + updatedInput） |
@@ -110,6 +116,10 @@ xcb result --tests --path /path/to/bundle.xcresult
 # 覆盖率摘要（test 时需 -enableCodeCoverage YES）
 xcb cov
 
+# CocoaPods（install/update/repo update/lib|spec lint 精简，其余原样直出）
+xcb pod install --repo-update
+xcb pod update Alamofire
+
 # 多真机：选定后强制目标
 WK_XCB_DEST="id=<UDID>" xcb build -scheme App ...
 
@@ -133,6 +143,7 @@ WK_XCB_BYPASS=1 xcodebuild -version
 | `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
 | `WK_XCB_NO_XCRESULT=1` | 关闭 test 类动作的 -resultBundlePath 注入与 xcresult 分区 |
 | `WK_XCB_COV_WORST` | `xcb cov` 最差文件展示条数（默认 10） |
+| `WK_XCB_CMAX` | pod 摘要变更条目展示上限（默认 40） |
 
 ## 测试前三方依赖预检
 

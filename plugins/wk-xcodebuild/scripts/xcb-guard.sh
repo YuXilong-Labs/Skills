@@ -62,6 +62,11 @@ elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])swift[[:space:]]+(b
     kind="swift"
     # 在 (路径/)?swift 前插入包装器并保留 swift：swift build … → <wrapper> swift build …
     rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])([^[:space:];&|()]*/)?swift([[:space:]]+(build|test)([[:space:]]|\$))#\1${sentinel} swift\3#")"
+elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])pod[[:space:]]+(install|update|repo[[:space:]]+update|lib[[:space:]]+lint|spec[[:space:]]+lint)([[:space:]]|$)'; then
+    kind="pod"
+    # 在 (路径/)?pod 前插入包装器并保留 pod（bundle exec pod … 同样适用，bundler 环境
+    # 经环境变量传递给子进程的 pod）：pod install … → <wrapper> pod install …
+    rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])([^[:space:];&|()]*/)?pod[[:space:]]+(install|update|repo[[:space:]]+update|lib[[:space:]]+lint|spec[[:space:]]+lint)([[:space:]]|\$)#\1${sentinel} pod \3\4#")"
 elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])xcresulttool[[:space:]]+get[[:space:]]+test-results[[:space:]]+(summary|tests)([[:space:]]|$)'; then
     kind="xcresulttool"
     # xcrun xcresulttool get test-results summary … → <wrapper> result …
@@ -73,7 +78,7 @@ elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])xcresulttool[[:spac
     # xcresulttool 改写失败 → 放行（与 xcodebuild 不同：原始输出大但跑得快，宁可放行不误伤）
     [ "$rewritten" = "$command_str" ] && exit 0
 else
-    exit 0   # 既非 xcodebuild / swift build/test / xcresulttool test-results → 放行
+    exit 0   # 既非 xcodebuild / swift build/test / pod 大输出子命令 / xcresulttool test-results → 放行
 fi
 
 new_cmd="${rewritten/${sentinel}/\"$WRAPPER\"}"
@@ -96,7 +101,7 @@ fi
 
 # 改写失败 / 无 jq → 回退 deny（绝不让裸命令静默跑掉）
 reason="检测到裸 ${kind} 调用，且自动改写失败。请改用包装器：
-  \"$WRAPPER\" <参数>            （swift 用：\"$WRAPPER\" swift <参数>）
+  \"$WRAPPER\" <参数>            （swift 用：\"$WRAPPER\" swift <参数>；pod 用：\"$WRAPPER\" pod <参数>）
 如确需直接运行，可加前缀 WK_XCB_BYPASS=1。"
 if command -v jq >/dev/null 2>&1; then
     jq -nc --arg r "$reason" '{
