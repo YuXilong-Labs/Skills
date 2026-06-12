@@ -20,7 +20,8 @@
 | 命令失败 | `Command ... failed with ... exit code`、`The following build commands failed:` 块 |
 | 链接错误 | `Undefined symbols ...` 块、`ld: ...`、`symbol(s) not found`、`linker command failed` |
 | 签名错误 | `Code Sign error`、`No signing certificate`、`requires a development team`、`Provisioning profile ...` |
-| 测试失败 | `Test Case ... failed`（权威计数源）、`Failing tests:` 块、测试汇总 `Executed N tests ...` |
+| 测试失败（XCTest） | `Test Case ... failed`、`Failing tests:` 块、测试汇总 `Executed N tests ...` |
+| 测试失败（Swift Testing） | `Test ... recorded an issue`、`(Test|Suite) ... failed after N seconds`、`Test run with N tests ...`（匹配文本短语，不依赖前缀符号——xcodebuild 下为私有区符号 `􀢄`，`swift test` 下为 `✘`） |
 | 编译警告 | `: warning:` / `^warning:`（**去重 + 计数**，默认最多展示 30 条） |
 
 ## 剥离（噪声）
@@ -45,6 +46,9 @@ counts : errors=N  warnings=M(unique=K)  linker=N  signing=N  test_failures=T
 -- test failures --
 -- failing tests --     (来自 Failing tests/Testing failed 块，仅展示)
 -- warnings (unique, showing X of K) --
+
+=== xcresult summary ===  (test 类动作自动追加；计数权威源，XCTest/Swift Testing 统一，
+                           详见 xcresult-digest.md)
 ```
 
 由 `xcb-run.sh` 追加页脚：

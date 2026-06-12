@@ -13,7 +13,7 @@
 | `wk-review` | `/wk-review` | **本地代码修改 Review** — 基于 git diff 审查逻辑 bug、crash 风险、内存泄漏、性能问题（Agent 并行架构，7 大维度） |
 | `wk-gh-pr-review-fix` | `/wk-gh-pr-review-fix` | **GitHub PR review 闭环** — 拉取未解决 review threads，修复、本地验证、推送并在线程中回复 resolve |
 | `wk-crash-repro-fix` | `/wk-crash-repro-fix` | **iOS Crash 闭环排查** — 根因定位、稳定复现、修复落地、回归验证全流程 |
-| `wk-xcodebuild` | `/wk-xcodebuild` | **xcodebuild 智能包装** — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简 build/test 输出（实测省 ~99.7% token） |
+| `wk-xcodebuild` | `/wk-xcodebuild` | **xcodebuild 智能包装** — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简 build/test 输出（实测省 ~99.7% token）；test 后追加 xcresult 权威摘要（XCTest/Swift Testing 统一计数），`xcb result`/`xcb cov` 摘要测试结果与覆盖率 |
 
 ### 代码审计
 
@@ -55,7 +55,7 @@
 | Hook | 类型 | 触发时机 | 描述 |
 |------|------|----------|------|
 | `ios-blocked-words-hook` | `PostToolUse` | `Edit`/`Write` iOS 文件后 | 自动触发禁止关键词检查（双端），非阻塞，发现违规时注入警告并禁止 git commit |
-| `wk-xcodebuild`（内置） | `PreToolUse` | 执行裸 `xcodebuild` 或 `swift build`/`swift test` 前 | 静默改写为包装器（`allow`+`updatedInput`）；`WK_XCB_BYPASS=1` 可逃生 |
+| `wk-xcodebuild`（内置） | `PreToolUse` | 执行裸 `xcodebuild`、`swift build`/`swift test` 或 `xcresulttool get test-results` 前 | 静默改写为包装器（`allow`+`updatedInput`）；`WK_XCB_BYPASS=1` 可逃生 |
 
 ## 安装
 

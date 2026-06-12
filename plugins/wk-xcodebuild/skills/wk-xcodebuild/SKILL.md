@@ -9,8 +9,13 @@ description: |
   swift 路径为本机构建、不选设备。两者都参考 rtk 的方式精简海量输出，只把关键信息
   （结果、error、链接/签名错误、测试失败用例、warning 去重计数）返回给 agent，
   完整日志落盘，显著减少上下文填充、节省 token。
+  test 类动作自动注入 -resultBundlePath 并在摘要追加 xcresult 权威分区
+  （xcresulttool 计数对 XCTest / Swift Testing 统一）；另提供 xcb result（xcresult
+  测试结果摘要，替代裸 xcresulttool get test-results）与 xcb cov（覆盖率摘要，
+  替代裸 xccov view --report）子命令。
   TRIGGER：用户要求编译/构建/跑测试/build/test/run on device/真机调试/swift build/swift test，
-  或 agent 准备调用 xcodebuild 或 swift build/test 时。
+  或要查看测试结果/xcresult/覆盖率，或 agent 准备调用 xcodebuild、swift build/test、
+  xcresulttool get test-results、xccov view --report 时。
 ---
 
 # WK-Xcodebuild — xcodebuild 智能包装 Skill
@@ -34,7 +39,7 @@ description: |
 | install.sh → Codex | `~/.codex/scripts/wk-xcodebuild/` |
 | 原生 plugin | `<plugin_root>/scripts/` |
 
-核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）、`xcb-test-deps.sh`（测试前三方依赖预检）。
+核心脚本：`xcb-run.sh`（包装器）、`xcb-devices.sh`（设备检测）、`xcb-summarize.awk`（精简）、`xcb-guard.sh`（hook 守卫）、`xcb-test-deps.sh`（测试前三方依赖预检）、`xcb-result.sh`（xcresult / 覆盖率结构化摘要）。
 
 install.sh 还会把 `xcb` 命令软链到 PATH（优先 `~/.local/bin`），即 `xcb` ≡ `xcb-run.sh`。
 
@@ -116,6 +121,26 @@ raw log   : /tmp/wk-xcodebuild/xcb-...log
 - 失败时按 `-- errors -- / -- linker -- / -- code signing -- / -- test failures --` 分区定位。
 - **需要完整上下文时再读 `raw log` 路径指向的文件**（按需 grep，不要整体读入）。
 
+### 第 4 步：xcresult 权威摘要与深挖（test 类动作）
+
+`test` / `test-without-building` 自动注入 `-resultBundlePath`，跑完在摘要追加
+`=== xcresult summary ===` 分区——**计数以此为权威**（xcresulttool 对 XCTest /
+Swift Testing 统一计数，文本正则可能漏 Swift Testing 标记）。需要更深的信息时：
+
+```bash
+# 失败用例 file:line 级明细（缺省自动定位最新 xcresult，或 --path 指定）
+xcb result --tests [--path <bundle.xcresult>]
+
+# 覆盖率摘要：总覆盖率 + 各 target + 最差 N 文件（test 时需 -enableCodeCoverage YES）
+xcb cov [--path <bundle.xcresult>]
+```
+
+**不要裸跑** `xcrun xcresulttool get test-results tests`（实测 ~39K token）或
+`xcrun xccov view --report`；Hook 会把 `xcresulttool get test-results summary|tests`
+静默改写为 `xcb result`。手工 `summary | head -n 80` 也不可靠——JSON 键按字母序，
+多设备时 `result`/`testFailures` 排在 80 行之外会被截掉。
+详见 `references/xcresult-digest.md`。
+
 ---
 
 ## 输入参数（透传给 xcodebuild）
@@ -135,6 +160,8 @@ raw log   : /tmp/wk-xcodebuild/xcb-...log
 | `WK_XCB_NOSTATS=1` | 关闭 token 收益统计记录 |
 | `WK_XCB_STATS_DIR` | 统计数据目录（默认 `~/.cache/wk-xcodebuild`） |
 | `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
+| `WK_XCB_NO_XCRESULT=1` | 关闭 test 类动作的 -resultBundlePath 注入与 xcresult 分区 |
+| `WK_XCB_COV_WORST` | `xcb cov` 最差文件展示条数（默认 10） |
 
 ---
 
@@ -183,3 +210,4 @@ xcrun devicectl（精确区分 USB/WiFi）
 - `references/destination-selection.md` — 设备检测细节、多设备处理、destination 取值
 - `references/output-filtering.md` — 精简规则（保留/剥离清单）、摘要格式、token 收益
 - `references/test-third-party-deps.md` — 测试前三方依赖预检（Texture 死锁 / MMKV 初始化）根因与修复
+- `references/xcresult-digest.md` — xcresult / 覆盖率摘要（xcb result / xcb cov）设计与实测收益

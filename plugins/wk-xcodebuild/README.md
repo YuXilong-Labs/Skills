@@ -12,6 +12,11 @@ rtk 风格精简输出，省 token。覆盖 `xcodebuild build/test` 与 `swift b
    链接 / 签名 / 测试失败 / warning 去重计数），完整日志落盘按需读取。
 3. **自动启用（静默改写）** — PreToolUse Hook 检测到裸 `xcodebuild` 时，直接将命令
    改写为包装器调用（`allow` + `updatedInput`），agent 无感、不需重试；改写失败才回退 deny。
+4. **xcresult 权威摘要** — test 类动作自动注入 `-resultBundlePath`，跑完追加
+   `=== xcresult summary ===` 分区（xcresulttool 计数对 XCTest / Swift Testing 统一）；
+   `xcb result [--tests]` 摘要测试结果（裸 `xcresulttool get test-results tests` 实测
+   ~39K token → ~94，省 99%），`xcb cov` 摘要覆盖率（总览 + 各 target + 最差 N 文件）。
+   Hook 同时把裸 `xcresulttool get test-results summary|tests` 静默改写为 `xcb result`。
 
 ## 实测 token 收益
 
@@ -58,7 +63,8 @@ xcb-gain --reset      # 清空统计
 | `scripts/xcb-devices.sh` | USB 真机检测，输出 JSON |
 | `scripts/xcb-summarize.awk` | rtk 风格输出精简（BSD-awk 兼容） |
 | `scripts/xcb-test-deps.sh` | 测试前三方依赖预检（Texture<3.2.0 死锁 / MMKV 未初始化），只读 Podfile.lock |
-| `scripts/xcb-guard.sh` | PreToolUse 守卫：裸 xcodebuild 静默改写为 xcb-run.sh（allow + updatedInput） |
+| `scripts/xcb-result.sh` | xcresult / 覆盖率结构化摘要（`xcb result` / `xcb cov`，jq 解析 xcresulttool/xccov JSON） |
+| `scripts/xcb-guard.sh` | PreToolUse 守卫：裸 xcodebuild / swift build/test / xcresulttool get test-results 静默改写为包装器（allow + updatedInput） |
 | `scripts/xcb-stats.sh` | token 收益统计查看器（`xcb-gain`） |
 | `scripts/.bin-links` | 声明 `xcb=xcb-run.sh`、`xcb-gain=xcb-stats.sh`，install.sh 据此软链命令到 PATH |
 | `hooks/hooks.json` | 原生 plugin hook（`${PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_ROOT}`） |
@@ -97,6 +103,13 @@ xcb test  -scheme App -project App.xcodeproj
 xcb swift build -c release
 xcb swift test --filter MyTests
 
+# xcresult 测试结果摘要（缺省自动定位最新 xcresult；--tests 含 file:line 失败明细）
+xcb result
+xcb result --tests --path /path/to/bundle.xcresult
+
+# 覆盖率摘要（test 时需 -enableCodeCoverage YES）
+xcb cov
+
 # 多真机：选定后强制目标
 WK_XCB_DEST="id=<UDID>" xcb build -scheme App ...
 
@@ -118,6 +131,8 @@ WK_XCB_BYPASS=1 xcodebuild -version
 | `WK_XCB_WMAX` | warning 去重展示上限（默认 30） |
 | `WK_XCB_MAXBODY` | 摘要正文行数上限（默认 240） |
 | `WK_XCB_NO_TESTDEPS=1` | 关闭测试前三方依赖预检（Texture/MMKV） |
+| `WK_XCB_NO_XCRESULT=1` | 关闭 test 类动作的 -resultBundlePath 注入与 xcresult 分区 |
+| `WK_XCB_COV_WORST` | `xcb cov` 最差文件展示条数（默认 10） |
 
 ## 测试前三方依赖预检
 

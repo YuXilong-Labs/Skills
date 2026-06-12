@@ -5,11 +5,17 @@
 # 用法：
 #   xcb-run.sh <xcodebuild 的所有参数>            # 默认 xcodebuild
 #   xcb-run.sh swift <swift 的所有参数>           # 首参 swift → 跑 SwiftPM
+#   xcb-run.sh result [--tests] [--path <xcresult>]  # xcresult 测试结果摘要（xcb-result.sh）
+#   xcb-run.sh cov    [--path <xcresult>]            # 覆盖率摘要（xcb-result.sh）
 #   例：xcb-run.sh build -scheme App -workspace App.xcworkspace
 #       xcb-run.sh test  -scheme App -project App.xcodeproj
 #       xcb-run.sh swift build -c release
 #       xcb-run.sh swift test --filter MyTests
 #   注：swift（SwiftPM）本机构建，不做真机选择；仅精简输出 + 统计。
+#
+# test 类动作（test / test-without-building）若未显式传 -resultBundlePath，
+# 自动注入落盘路径，并在摘要末尾追加 xcresult 权威分区（xcresulttool 计数对
+# XCTest / Swift Testing 统一，补文本正则的盲区）。WK_XCB_NO_XCRESULT=1 关闭。
 #
 # 行为：
 #   1) 若参数未含 -destination 且是 build/test 类操作：
@@ -40,6 +46,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 DEVICES_SH="$SCRIPT_DIR/xcb-devices.sh"
 SUMMARIZE_AWK="$SCRIPT_DIR/xcb-summarize.awk"
 TESTDEPS_SH="$SCRIPT_DIR/xcb-test-deps.sh"
+RESULT_SH="$SCRIPT_DIR/xcb-result.sh"
 
 err() { printf '%s\n' "$*" >&2; }
 
@@ -68,6 +75,13 @@ if [ "$#" -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     [ "$#" -eq 0 ] && exit 64 || exit 0
 fi
 
+# ---- 子命令分发：result / cov → xcb-result.sh（xcresult 结构化摘要）----
+case "${1:-}" in
+    result|cov)
+        [ -x "$RESULT_SH" ] || { err "缺少 $RESULT_SH"; exit 64; }
+        exec "$RESULT_SH" "$@" ;;
+esac
+
 # ---- 工具分发：默认 xcodebuild；首参为 swift 则跑 SwiftPM（swift build/test）----
 TOOL="xcodebuild"
 if [ "${1:-}" = "swift" ]; then
@@ -81,6 +95,10 @@ has_destination=0
 action_needs_dest=0
 needs_summarize=0
 is_test_action=0
+wants_xcresult=0
+has_result_bundle=0
+user_xcresult=""
+prev_arg=""
 action_verb="build"
 if [ "$TOOL" = "swift" ]; then
     for a in "$@"; do
@@ -91,14 +109,21 @@ if [ "$TOOL" = "swift" ]; then
     done
 else
     for a in "$@"; do
+        [ "$prev_arg" = "-resultBundlePath" ] && user_xcresult="$a"
         case "$a" in
             -destination) has_destination=1 ;;
             -destination=*) has_destination=1 ;;
+            -resultBundlePath) has_result_bundle=1 ;;
             build|analyze|archive|install)
                 action_needs_dest=1; needs_summarize=1; action_verb="$a" ;;
-            test|build-for-testing|test-without-building)
+            test|test-without-building)
+                # 这两类动作产出测试结果，跑完用 xcresult 做权威摘要
+                action_needs_dest=1; needs_summarize=1; is_test_action=1
+                wants_xcresult=1; action_verb="$a" ;;
+            build-for-testing)
                 action_needs_dest=1; needs_summarize=1; is_test_action=1; action_verb="$a" ;;
         esac
+        prev_arg="$a"
     done
 fi
 
@@ -155,6 +180,19 @@ LOG_DIR="${TMPDIR:-/tmp}/wk-xcodebuild"
 mkdir -p "$LOG_DIR"
 RAW="$LOG_DIR/xcb-$(date +%Y%m%d-%H%M%S)-$$.log"
 
+# ---- xcresult 注入（仅 test / test-without-building）----
+# xcresulttool 的计数对 XCTest / Swift Testing 统一权威，跑完追加到摘要，
+# 补文本正则识别不到 Swift Testing 失败标记的盲区。WK_XCB_NO_XCRESULT=1 关闭。
+XCRESULT=""
+if [ "$wants_xcresult" -eq 1 ] && [ "${WK_XCB_NO_XCRESULT:-0}" != "1" ] && [ "$TOOL" = "xcodebuild" ]; then
+    if [ "$has_result_bundle" -eq 1 ]; then
+        XCRESULT="$user_xcresult"   # 用户已显式指定 → 尊重其路径，仅用于事后摘要
+    else
+        XCRESULT="$LOG_DIR/xcb-$(date +%Y%m%d-%H%M%S)-$$.xcresult"
+        set -- "$@" -resultBundlePath "$XCRESULT"
+    fi
+fi
+
 # ---- 组装并运行 ----
 set -- "$@"
 if [ -n "$DEST" ]; then
@@ -174,6 +212,19 @@ fi
 # ---- 是否需要精简：build/test 类才精简；信息类（-list/-version 等）直出 ----
 if [ "$needs_summarize" -eq 1 ]; then
     summary="$(awk -v WMAX="${WK_XCB_WMAX:-30}" -v MAXBODY="${WK_XCB_MAXBODY:-240}" -v TOOL="$TOOL" -f "$SUMMARIZE_AWK" "$RAW")"
+
+    # ---- xcresult 权威分区（test 类动作跑完追加）----
+    # 子摘要自带页脚（---- 之后），截掉避免双页脚；统计由本脚本统一记一次。
+    if [ -n "$XCRESULT" ] && [ -e "$XCRESULT" ] && [ -x "$RESULT_SH" ]; then
+        xcres_digest="$(WK_XCB_NOSTATS=1 "$RESULT_SH" result --path "$XCRESULT" 2>/dev/null \
+                        | awk '/^----$/{exit} {print}')"
+        # 测试根本没跑起来（如 scheme 错误）时 bundle 是空壳，分区只有噪声 → 不追加
+        case "$xcres_digest" in *"result  : unknown"*) xcres_digest="" ;; esac
+        [ -n "$xcres_digest" ] && summary="$summary
+
+$xcres_digest"
+    fi
+
     # 测试预检告警置顶（含 Texture/MMKV 时），确保 agent 在摘要里第一眼看到
     [ -n "$PREFLIGHT" ] && printf '%s\n\n' "$PREFLIGHT"
     printf '%s\n' "$summary"

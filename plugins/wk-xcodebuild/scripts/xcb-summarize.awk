@@ -70,10 +70,18 @@ infailtests==1 {
     collect_err($0); next
 }
 
-# ---- 测试用例失败 ----
+# ---- 测试用例失败（XCTest 文本格式）----
 /Test Case .* failed/    { collect_testfail($0); next }
 /Test Suite .* failed/   { collect_testfail($0); next }
 /Executed [0-9]+ test/    { collect_summary($0); next }
+
+# ---- 测试用例失败（Swift Testing）----
+# 前缀符号随运行方式变化（xcodebuild 下为私有区符号 􀢄，swift test 终端下为 ✘），
+# 故匹配其独有文本短语，不依赖符号；"failed after N seconds" 仅 Swift Testing 使用
+# （XCTest 是 "failed (N seconds)"），不会误伤。
+/Test run with [0-9]+ test/                       { if ($0 ~ /failed/) result_failed=1; collect_summary($0); next }
+/Test .* recorded an issue/                       { collect_testfail($0); next }
+/(Test|Suite) .* failed after [0-9.]+ seconds/    { collect_testfail($0); next }
 
 # ---- 编译 error / fatal error ----
 /(^|: )(fatal error|error): /  { collect_err($0); next }

@@ -118,8 +118,8 @@
     },
     {
       "name": "wk-xcodebuild",
-      "description": "xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token",
-      "version": "1.1.0",
+      "description": "xcodebuild 智能包装 — 自动选 USB 真机目标（无则回退 Mac），rtk 风格精简编译/测试输出节省 token；test 后追加 xcresult 权威摘要，xcb result/cov 摘要测试结果与覆盖率",
+      "version": "1.2.0",
       "source": "./plugins/wk-xcodebuild",
       "author": {
         "name": "yuxilong",

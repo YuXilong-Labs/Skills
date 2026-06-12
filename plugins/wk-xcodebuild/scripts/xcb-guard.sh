@@ -62,8 +62,18 @@ elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])swift[[:space:]]+(b
     kind="swift"
     # 在 (路径/)?swift 前插入包装器并保留 swift：swift build … → <wrapper> swift build …
     rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])([^[:space:];&|()]*/)?swift([[:space:]]+(build|test)([[:space:]]|\$))#\1${sentinel} swift\3#")"
+elif printf '%s' "$command_str" | grep -Eq '(^|[^[:alnum:]_])xcresulttool[[:space:]]+get[[:space:]]+test-results[[:space:]]+(summary|tests)([[:space:]]|$)'; then
+    kind="xcresulttool"
+    # xcrun xcresulttool get test-results summary … → <wrapper> result …
+    # （tests → result --tests；--path 等后续参数原样保留，包装器忽略未知 flag）
+    rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])(xcrun[[:space:]]+)?([^[:space:];&|()]*/)?xcresulttool[[:space:]]+get[[:space:]]+test-results[[:space:]]+summary#\1${sentinel} result#")"
+    if [ "$rewritten" = "$command_str" ]; then
+        rewritten="$(printf '%s' "$command_str" | sed -E "s#(^|[[:space:];&|(])(xcrun[[:space:]]+)?([^[:space:];&|()]*/)?xcresulttool[[:space:]]+get[[:space:]]+test-results[[:space:]]+tests#\1${sentinel} result --tests#")"
+    fi
+    # xcresulttool 改写失败 → 放行（与 xcodebuild 不同：原始输出大但跑得快，宁可放行不误伤）
+    [ "$rewritten" = "$command_str" ] && exit 0
 else
-    exit 0   # 既非 xcodebuild 也非 swift build/test → 放行
+    exit 0   # 既非 xcodebuild / swift build/test / xcresulttool test-results → 放行
 fi
 
 new_cmd="${rewritten/${sentinel}/\"$WRAPPER\"}"
@@ -80,6 +90,9 @@ if command -v jq >/dev/null 2>&1 && [ "$new_cmd" != "$rewritten" ]; then
     }'
     exit 0
 fi
+
+# xcresulttool：改写失败 / 无 jq → 放行原命令（不 deny，避免误伤只读查询）
+[ "$kind" = "xcresulttool" ] && exit 0
 
 # 改写失败 / 无 jq → 回退 deny（绝不让裸命令静默跑掉）
 reason="检测到裸 ${kind} 调用，且自动改写失败。请改用包装器：
