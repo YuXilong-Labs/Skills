@@ -87,6 +87,11 @@ infailtests==1 {
 /(^|: )(fatal error|error): /  { collect_err($0); next }
 /^error: /                     { collect_err($0); next }
 
+# ---- 噪声 warning：显式预编译模块 .pcm 找不到（无害，纯刷屏）----
+# 形如 `warning: /var/folders/.../ExplicitPrecompiledModules/UIKit-XXX.pcm: No such file or directory`，
+# 对决策无价值，直接丢弃（不计数、不展示），避免填充上下文。
+/warning: .*\.pcm: No such file or directory/  { next }
+
 # ---- 编译 warning（去重计数）----
 /(^|: )warning: /  { collect_warn($0); next }
 /^warning: /       { collect_warn($0); next }
